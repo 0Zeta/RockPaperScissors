@@ -5,6 +5,7 @@ import pandas as pd
 
 
 SIGNS = 3
+EQUAL_PROBS = np.array([1, 1, 1], dtype=np.float) / 3
 
 
 class RPSAgent(object):
@@ -38,6 +39,15 @@ class RPSAgent(object):
         return action, self.history
 
     def act(self) -> int:
+        pass
+
+
+class Policy(object):
+
+    def get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        """
+        Returns probabilities for all possible actions
+        """
         pass
 
 
