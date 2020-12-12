@@ -9,17 +9,21 @@ EQUAL_PROBS = np.array([1, 1, 1], dtype=np.float) / 3
 
 
 class RPSAgent(object):
-
     def __init__(self, configuration):
         self.obs = None
         self.config = configuration
-        self.history = pd.DataFrame(columns=['step', 'action', 'opponent_action'])
-        self.history.set_index('step', inplace=True)
+        self.history = pd.DataFrame(columns=["step", "action", "opponent_action"])
+        self.history.set_index("step", inplace=True)
+        self.history = self.history.astype(
+            {"action": np.int, "opponent_action": np.int}
+        )
 
         self.step = 0
         self.score = 0
 
-    def agent(self, observation, configuration=None, history=None) -> Tuple[int, pd.DataFrame]:
+    def agent(
+        self, observation, configuration=None, history=None
+    ) -> Tuple[int, pd.DataFrame]:
         if configuration is not None:
             self.config = configuration
         if history is not None:
@@ -30,12 +34,14 @@ class RPSAgent(object):
 
         # Append the last action of the opponent to the history
         if self.step > 0:
-            self.history.loc[self.step - 1, 'opponent_action'] = self.obs.lastOpponentAction
+            self.history.loc[
+                self.step - 1, "opponent_action"
+            ] = self.obs.lastOpponentAction
             self.score = get_score(self.history)
 
         # Choose an action and append it to the history
         action = self.act()
-        self.history.loc[self.step] = {'action': action, 'opponent_action': None}
+        self.history.loc[self.step] = {"action": action, "opponent_action": None}
         return action, self.history
 
     def act(self) -> int:
@@ -43,10 +49,10 @@ class RPSAgent(object):
 
 
 class Policy(object):
-
     def __init__(self):
         self.history = []
-        self.name = 'policy'
+        self.name = "policy"
+        self.is_deterministic = False
 
     def probabilities(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         """
@@ -72,6 +78,10 @@ def counters(actions: pd.Series) -> pd.Series:
 
 def get_score(history: pd.DataFrame) -> int:
     score = 0
-    score += len(history[((history['opponent_action'] + 1) % SIGNS) == history['action']])
-    score -= len(history[((history['action'] + 1) % SIGNS) == history['opponent_action']])
+    score += len(
+        history[((history["opponent_action"] + 1) % SIGNS) == history["action"]]
+    )
+    score -= len(
+        history[((history["action"] + 1) % SIGNS) == history["opponent_action"]]
+    )
     return score

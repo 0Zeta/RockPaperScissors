@@ -8,7 +8,7 @@ class RandomPolicy(Policy):
 
     def __init__(self):
         super().__init__()
-        self.name = 'random_policy'
+        self.name = "random_policy"
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         return EQUAL_PROBS
@@ -22,7 +22,8 @@ class IncrementPolicy(Policy):
     def __init__(self, policy: Policy):
         super().__init__()
         self.policy = policy
-        self.name = 'counter_' + policy.name
+        self.name = "incremented_" + policy.name
+        self.is_deterministic = policy.is_deterministic
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         # Return equal probabilities if the history of the policy is empty
@@ -39,10 +40,17 @@ class CounterPolicy(Policy):
     def __init__(self, policy: Policy):
         super().__init__()
         self.policy = policy
-        self.name = 'opponent_' + policy.name
+        self.name = "counter_" + policy.name
+        self.is_deterministic = policy.is_deterministic
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
-        probs = self.policy._get_probs(step, -score, history.rename(columns={'action': 'opponent_action', 'opponent_action': 'action'}))
+        probs = self.policy._get_probs(
+            step,
+            -score,
+            history.rename(
+                columns={"action": "opponent_action", "opponent_action": "action"}
+            ),
+        )
         return np.roll(probs, 1)
 
 
@@ -54,10 +62,11 @@ class StrictPolicy(Policy):
     def __init__(self, policy: Policy):
         super().__init__()
         self.policy = policy
-        self.name = 'strict_' + policy.name
+        self.name = "strict_" + policy.name
+        self.is_deterministic = True
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
-        probs = self.policy._get_probs(step, score, history)
+        probs = self.policy._get_probs(step, score, history).copy()
         action = np.argmax(probs)
         probs[:] = 0
         probs[action] = 1
@@ -71,16 +80,18 @@ class FrequencyPolicy(Policy):
 
     def __init__(self):
         super().__init__()
-        self.name = 'frequency_policy'
+        self.name = "frequency_policy"
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         if len(history) == 0:
             # Return equal probabilities at the start of the episode
             return EQUAL_PROBS
-        probs = counters(history['opponent_action']).value_counts(normalize=True, sort=False)
+        probs = counters(history["opponent_action"]).value_counts(
+            normalize=True, sort=False
+        )
         for i in range(SIGNS):
             if i not in probs.keys():
-                probs.loc[i] = 0.
+                probs.loc[i] = 0.0
         probs.sort_index(inplace=True)
         return probs.to_numpy()
 
@@ -92,15 +103,40 @@ class CopyLastActionPolicy(Policy):
 
     def __init__(self):
         super().__init__()
-        self.name = 'copy_last_action_policy'
+        self.name = "copy_last_action_policy"
+        self.is_deterministic = True
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         if len(history) == 0:
             # Return equal probabilities at the start of the episode
             return EQUAL_PROBS
         probs = np.zeros((3,), dtype=np.float)
-        probs[int(history.loc[step - 1, 'opponent_action'])] = 1.
+        probs[int(history.loc[step - 1, "opponent_action"])] = 1.0
         return probs
+
+
+class TransitionMatrixPolicy(Policy):
+    """
+    uses a simple transition matrix to predict the opponent´s next action and counter it
+
+    Adapted from https://www.kaggle.com/group16/rps-opponent-transition-matrix
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.name = "transition_matrix_policy"
+        self.T = np.zeros((3, 3), dtype=np.int)
+        self.P = np.zeros((3, 3), dtype=np.float)
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        if len(history) > 1:
+            # Update the matrices
+            last_action = int(history.loc[step - 1, "opponent_action"])
+            self.T[int(history.loc[step - 2, "opponent_action"]), last_action] += 1
+            self.P = np.divide(self.T, np.maximum(1, self.T.sum(axis=1)).reshape(-1, 1))
+            if np.sum(self.P[last_action, :]) == 1:
+                return np.roll(self.P[last_action, :], 1)
+        return EQUAL_PROBS
 
 
 class RockPolicy(Policy):
@@ -110,8 +146,9 @@ class RockPolicy(Policy):
 
     def __init__(self):
         super().__init__()
-        self.name = 'rock_policy'
+        self.name = "rock_policy"
         self.probs = np.array([1, 0, 0], dtype=np.float)
+        self.is_deterministic = True
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         return self.probs
@@ -124,8 +161,9 @@ class PaperPolicy(Policy):
 
     def __init__(self):
         super().__init__()
-        self.name = 'paper_policy'
+        self.name = "paper_policy"
         self.probs = np.array([0, 1, 0], dtype=np.float)
+        self.is_deterministic = True
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         return self.probs
@@ -138,8 +176,9 @@ class ScissorsPolicy(Policy):
 
     def __init__(self):
         super().__init__()
-        self.name = 'scissors_policy'
+        self.name = "scissors_policy"
         self.probs = np.array([0, 0, 1], dtype=np.float)
+        self.is_deterministic = True
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         return self.probs

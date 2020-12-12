@@ -17,10 +17,12 @@ class NaiveAgent(RPSAgent):
             return randint(0, 2)
 
         # Use the relative frequencies of the opponent's actions as a probability distribution for our actions
-        probs = counters(self.history['opponent_action']).value_counts(normalize=True, sort=False)
+        probs = counters(self.history["opponent_action"]).value_counts(
+            normalize=True, sort=False
+        )
         for i in range(SIGNS):
             if i not in probs.keys():
-                probs.loc[i] = 0.
+                probs.loc[i] = 0.0
         probs.sort_index(inplace=True)
         return int(np.random.choice(range(SIGNS), p=probs))
 
@@ -41,7 +43,6 @@ class NaiveAgent(RPSAgent):
 
         # Flip the decision with a certain probability
         return self.play_random if randint(1, 100) <= 85 else not self.play_random
-
 
 
 AGENT = None

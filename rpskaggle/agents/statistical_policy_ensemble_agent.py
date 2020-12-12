@@ -1,6 +1,10 @@
+import logging
 from random import randint
 from rpskaggle.helpers import *
 from rpskaggle.policies import *
+
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class StatisticalPolicyEnsembleAgent(RPSAgent):
@@ -18,19 +22,56 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         self.random_policies = [RandomPolicy()]
         # Policies that shouldn´t receive a counter policy
         self.basic_policies = [RockPolicy(), PaperPolicy(), ScissorsPolicy()]
-        self.advanced_policies = [FrequencyPolicy(), CopyLastActionPolicy()]
-        # Sicilian reasoning
-        self.incremented_policies = [IncrementPolicy(policy) for policy in self.advanced_policies]
-        self.double_incremented_policies = [IncrementPolicy(policy) for policy in self.incremented_policies]
+        self.advanced_policies = [
+            FrequencyPolicy(),
+            CopyLastActionPolicy(),
+            TransitionMatrixPolicy(),
+        ]
+        # Strict versions of the advanced policies
+        self.strict_policies = [
+            StrictPolicy(policy)
+            for policy in self.advanced_policies
+            if not policy.is_deterministic
+        ]
         # Counter policies
-        self.counter_policies = [CounterPolicy(FrequencyPolicy()), CounterPolicy(StrictPolicy(FrequencyPolicy()))]
-        self.policies = self.random_policies + self.advanced_policies + self.incremented_policies + self.double_incremented_policies + self.counter_policies
+        self.counter_policies = [
+            CounterPolicy(FrequencyPolicy()),
+            CounterPolicy(CopyLastActionPolicy()),
+            CounterPolicy(TransitionMatrixPolicy()),
+        ]
+        self.strict_counter_policies = [
+            StrictPolicy(policy)
+            for policy in self.counter_policies
+            if not policy.is_deterministic
+        ]
+        # Sicilian reasoning
+        self.incremented_policies = [
+            IncrementPolicy(policy)
+            for policy in (
+                self.advanced_policies
+                + self.strict_policies
+                + self.counter_policies
+                + self.strict_counter_policies
+            )
+        ]
+        self.double_incremented_policies = [
+            IncrementPolicy(policy) for policy in self.incremented_policies
+        ]
+        self.policies = (
+            self.random_policies
+            + self.advanced_policies
+            + self.strict_policies
+            + self.incremented_policies
+            + self.double_incremented_policies
+            + self.counter_policies
+            + self.strict_counter_policies
+        )
         self.name_to_policy = {policy.name: policy for policy in self.policies}
 
         # Create a data frame with the probabilities the policies returned for every step
         policy_names = [policy.name for policy in self.policies]
-        self.performance = pd.DataFrame(columns=['step'] + policy_names)
-        self.performance.set_index('step', inplace=True)
+        self.performance = pd.DataFrame(columns=["step"] + policy_names)
+        self.performance.set_index("step", inplace=True)
 
     def act(self) -> int:
         if len(self.history) > 0:
@@ -38,14 +79,25 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             self.update_policy_performance()
 
         # Get the new probabilities from every policy
-        policy_probs = np.array([policy.probabilities(self.step, self.score, self.history) for policy in self.policies])
+        policy_probs = np.array(
+            [
+                policy.probabilities(self.step, self.score, self.history)
+                for policy in self.policies
+            ]
+        )
 
         if len(self.history) > 0:
             # Determine the performance scores of the policies and calculate their respective weights using softmax
-            policy_scores = self.performance.sum(axis=0).to_numpy() / 5
-            policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(np.exp(policy_scores - np.max(policy_scores)))
+            policy_scores = self.performance.sum(axis=0)
+            logging.debug(policy_scores)
+            policy_scores = policy_scores.to_numpy() / 5
+            policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(
+                np.exp(policy_scores - np.max(policy_scores))
+            )
             # Calculate the resulting probabilities for the possible actions
-            probs = np.sum(policy_weights.reshape((policy_weights.size, 1)) * policy_probs, axis=0)
+            probs = np.sum(
+                policy_weights.reshape((policy_weights.size, 1)) * policy_probs, axis=0
+            )
 
         # Play randomly for the first 45 steps
         if self.step < 45:
