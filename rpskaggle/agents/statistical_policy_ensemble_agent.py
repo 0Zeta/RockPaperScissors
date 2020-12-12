@@ -42,7 +42,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
 
         if len(self.history) > 0:
             # Determine the performance scores of the policies and calculate their respective weights using softmax
-            policy_scores = self.performance.sum(axis=0).to_numpy()
+            policy_scores = self.performance.sum(axis=0).to_numpy() / 5
             policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(np.exp(policy_scores - np.max(policy_scores)))
             # Calculate the resulting probabilities for the possible actions
             probs = np.sum(policy_weights.reshape((policy_weights.size, 1)) * policy_probs, axis=0)
