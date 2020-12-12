@@ -14,9 +14,9 @@ class RandomPolicy(Policy):
         return EQUAL_PROBS
 
 
-class CounterPolicy(Policy):
+class IncrementPolicy(Policy):
     """
-    a counter policy for any given policy choosing actions based on the policy´s last probabilities
+    turns all actions given by a policy into their counters
     """
 
     def __init__(self, policy: Policy):
@@ -29,6 +29,39 @@ class CounterPolicy(Policy):
         if len(self.policy.history) == 0:
             return EQUAL_PROBS
         return np.roll(self.policy.history[-1], 1)
+
+
+class CounterPolicy(Policy):
+    """
+    a policy countering the specified policy assuming the opponent uses this policy
+    """
+
+    def __init__(self, policy: Policy):
+        super().__init__()
+        self.policy = policy
+        self.name = 'opponent_' + policy.name
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        probs = self.policy._get_probs(step, -score, history.rename(columns={'action': 'opponent_action', 'opponent_action': 'action'}))
+        return np.roll(probs, 1)
+
+
+class StrictPolicy(Policy):
+    """
+    always selects the action with the highest probability for a given policy
+    """
+
+    def __init__(self, policy: Policy):
+        super().__init__()
+        self.policy = policy
+        self.name = 'strict_' + policy.name
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        probs = self.policy._get_probs(step, score, history)
+        action = np.argmax(probs)
+        probs[:] = 0
+        probs[action] = 1
+        return probs
 
 
 class FrequencyPolicy(Policy):

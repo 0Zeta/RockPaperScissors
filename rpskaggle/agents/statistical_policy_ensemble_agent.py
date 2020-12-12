@@ -19,9 +19,12 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         # Policies that shouldn´t receive a counter policy
         self.basic_policies = [RockPolicy(), PaperPolicy(), ScissorsPolicy()]
         self.advanced_policies = [FrequencyPolicy(), CopyLastActionPolicy()]
-        # Counters to the advanced policies => sicilian reasoning
-        self.counter_policies = [CounterPolicy(policy) for policy in self.advanced_policies]
-        self.policies = self.random_policies + self.basic_policies + self.advanced_policies + self.counter_policies
+        # Sicilian reasoning
+        self.incremented_policies = [IncrementPolicy(policy) for policy in self.advanced_policies]
+        self.double_incremented_policies = [IncrementPolicy(policy) for policy in self.incremented_policies]
+        # Counter policies
+        self.counter_policies = [CounterPolicy(FrequencyPolicy()), CounterPolicy(StrictPolicy(FrequencyPolicy()))]
+        self.policies = self.random_policies + self.advanced_policies + self.incremented_policies + self.double_incremented_policies + self.counter_policies
         self.name_to_policy = {policy.name: policy for policy in self.policies}
 
         # Create a data frame with the probabilities the policies returned for every step
