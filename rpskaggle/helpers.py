@@ -44,7 +44,19 @@ class RPSAgent(object):
 
 class Policy(object):
 
-    def get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+    def __init__(self):
+        self.history = []
+        self.name = 'policy'
+
+    def probabilities(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        """
+        Returns probabilities for all possible actions and saves the probabilities to the policy´s history
+        """
+        probabilities = self._get_probs(step, score, history)
+        self.history.append(probabilities)
+        return probabilities
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         """
         Returns probabilities for all possible actions
         """

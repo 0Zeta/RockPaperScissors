@@ -35,7 +35,7 @@ class NaiveAgent(RPSAgent):
             return False
 
         if not self.play_random:
-            if self.score < 30:
+            if self.score < -20:
                 # Seems like our strategy doesn't work
                 self.play_random = True
 

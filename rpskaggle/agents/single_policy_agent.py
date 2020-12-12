@@ -11,4 +11,4 @@ class SinglePolicyAgent(RPSAgent):
         self.policy = policy
 
     def act(self) -> int:
-        return int(np.random.choice(range(SIGNS), p=self.policy.get_probs(self.step, self.score, self.history)))
+        return int(np.random.choice(range(SIGNS), p=self.policy.probabilities(self.step, self.score, self.history)))
