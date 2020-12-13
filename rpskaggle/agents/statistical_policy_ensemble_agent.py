@@ -26,6 +26,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             FrequencyPolicy(),
             CopyLastActionPolicy(),
             TransitionMatrixPolicy(),
+            TransitionTensorPolicy(),
         ]
         # Strict versions of the advanced policies
         self.strict_policies = [
@@ -38,6 +39,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             CounterPolicy(FrequencyPolicy()),
             CounterPolicy(CopyLastActionPolicy()),
             CounterPolicy(TransitionMatrixPolicy()),
+            CounterPolicy(TransitionTensorPolicy()),
         ]
         self.strict_counter_policies = [
             StrictPolicy(policy)

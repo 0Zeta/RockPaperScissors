@@ -139,6 +139,35 @@ class TransitionMatrixPolicy(Policy):
         return EQUAL_PROBS
 
 
+class TransitionTensorPolicy(Policy):
+    """
+    similar to TransitionMatrixPolicy, but takes both agent´s actions into account
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.name = "transition_tensor_policy"
+        self.T = np.zeros((3, 3, 3), dtype=np.int)
+        self.P = np.zeros((3, 3, 3), dtype=np.float)
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        if len(history) > 1:
+            # Update the matrices
+            last_action = int(history.loc[step - 1, "action"])
+            opponent_last_action = int(history.loc[step - 1, "opponent_action"])
+            self.T[
+                int(history.loc[step - 2, "opponent_action"]),
+                int(history.loc[step - 2, "action"]),
+                last_action,
+            ] += 1
+            self.P = np.divide(
+                self.T, np.maximum(1, self.T.sum(axis=2)).reshape(-1, 3, 1)
+            )
+            if np.sum(self.P[opponent_last_action, last_action, :]) == 1:
+                return np.roll(self.P[opponent_last_action, last_action, :], 1)
+        return EQUAL_PROBS
+
+
 class RockPolicy(Policy):
     """
     chooses Rock the whole time
