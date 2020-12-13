@@ -1,3 +1,5 @@
+from typing import List
+
 from rpskaggle.helpers import *
 
 
@@ -71,6 +73,30 @@ class StrictPolicy(Policy):
         probs[:] = 0
         probs[action] = 1
         return probs
+
+
+class AlternatePolicy(Policy):
+    """
+    Alternates between the specified policies every interval steps
+    """
+
+    def __init__(self, policies: List[Policy], interval: int):
+        super().__init__()
+        self.name = (
+            "alternate_"
+            + ("_".join([policy.name.replace("_policy", "") for policy in policies]))
+            + "_policies"
+        )
+        self.is_deterministic = all([policy.is_deterministic for policy in policies])
+        self.policies = policies
+        self.interval = interval
+        self.current_policy = 0
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        if step % self.interval == 0:
+            # Alternate
+            self.current_policy = (self.current_policy + 1) % len(self.policies)
+        return self.policies[self.current_policy]._get_probs(step, score, history)
 
 
 class FrequencyPolicy(Policy):
