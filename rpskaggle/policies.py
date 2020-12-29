@@ -1,4 +1,5 @@
 from typing import List
+from sklearn.ensemble import RandomForestClassifier
 
 from rpskaggle.helpers import *
 
@@ -192,6 +193,65 @@ class TransitionTensorPolicy(Policy):
             if np.sum(self.P[opponent_last_action, last_action, :]) == 1:
                 return np.roll(self.P[opponent_last_action, last_action, :], 1)
         return EQUAL_PROBS
+
+
+class MaxHistoryPolicy(Policy):
+    """
+    searches for similar situations in the game history and assumes the past is doomed to repeat itself
+    """
+
+    def __init(self):
+        super().__init__()
+        self.name = "max_history_policy"
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        # TODO: implement
+        pass
+
+
+class RandomForestPolicy(Policy):
+    """
+    uses a random forest classificator to predict the opponent´s action using the last moves as data
+    """
+
+    def __init__(self, n_estimators: int, max_train_size: int, prediction_window: int):
+        super().__init__()
+        self.name = "random_forest_policy"
+        self.is_deterministic = True
+        self.model = RandomForestClassifier(n_estimators=n_estimators)
+        self.max_train_size = max_train_size
+        self.prediction_window = prediction_window
+        self.X_train = np.ndarray(shape=(0, prediction_window * 2), dtype=np.int)
+        self.y_train = np.ndarray(shape=(0, 1), dtype=np.int)
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        if len(history) < self.prediction_window + 1:
+            # Return equal probabilities until we have enough data
+            return EQUAL_PROBS
+        # Add the last prediction_window steps to the training data
+        last_steps = history.iloc[-self.prediction_window - 1 : -1][
+            ["action", "opponent_action"]
+        ].to_numpy()
+        self.X_train = np.append(
+            self.X_train, last_steps.reshape(1, self.prediction_window * 2)
+        )
+        self.y_train = np.append(self.y_train, history.iloc[-1]["opponent_action"])
+        self.X_train = self.X_train.reshape(-1, self.prediction_window * 2)
+        # Ensure we don´t use more than max_train_size samples
+        if len(self.X_train) > self.max_train_size:
+            self.X_train = self.X_train[1:]
+            self.y_train = self.y_train[1:]
+        # Fit the model
+        self.model.fit(self.X_train, self.y_train)
+        # Predict the opponent´s next action
+        X_predict = history.iloc[-self.prediction_window :][
+            ["action", "opponent_action"]
+        ].to_numpy()
+        prediction = self.model.predict(
+            X_predict.reshape(1, self.prediction_window * 2)
+        )
+        # Return the counter of the action
+        return np.roll(one_hot(int(prediction[0])), 1)
 
 
 class RockPolicy(Policy):

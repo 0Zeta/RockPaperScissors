@@ -1,6 +1,5 @@
 import logging
 from random import randint
-from rpskaggle.helpers import *
 from rpskaggle.policies import *
 
 
@@ -27,6 +26,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             CopyLastActionPolicy(),
             TransitionMatrixPolicy(),
             TransitionTensorPolicy(),
+            RandomForestPolicy(20, 20, 5),
         ]
         # Strict versions of the advanced policies
         self.strict_policies = [

@@ -85,3 +85,9 @@ def get_score(history: pd.DataFrame) -> int:
         history[((history["action"] + 1) % SIGNS) == history["opponent_action"]]
     )
     return score
+
+
+def one_hot(action: int) -> np.ndarray:
+    encoded_action = np.zeros((3,), dtype=np.float)
+    encoded_action[action] = 1
+    return encoded_action
