@@ -3,7 +3,7 @@ from random import randint
 from rpskaggle.policies import *
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 class StatisticalPolicyEnsembleAgent(RPSAgent):
@@ -91,6 +91,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         self.window_sizes_performance.set_index("step", inplace=True)
 
     def act(self) -> int:
+        logging.debug("Begin step " + str(self.step))
         if len(self.history) > 0:
             # Update the historical performance for each policy and for each window size
             self.update_performance()
@@ -108,8 +109,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             window_probs = []
             for window_size in self.window_sizes:
                 policy_scores = self.policies_performance.tail(window_size).sum(axis=0)
-                # logging.debug(policy_scores)
-                policy_scores = policy_scores.to_numpy() / 5
+                if window_size == self.window_sizes[-1]:
+                    logging.debug(policy_scores)
+                policy_scores = policy_scores.to_numpy() / max(window_size / 200, 2)
                 policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(
                     np.exp(policy_scores - np.max(policy_scores))
                 )
@@ -121,6 +123,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 window_probs.append(p)
                 # Save the probabilities to evaluate the performance of this window size in the next step
                 self.last_probabilities_by_window_size[window_size] = p
+                logging.debug("Window size " + str(window_size) + " probabilities: " + str(p))
 
             # Determine the performance scores for the window sizes and calculate their respective weights
             window_scores = self.window_sizes_performance.sum(axis=0)
@@ -133,6 +136,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 window_weights.reshape((window_weights.size, 1)) * window_probs,
                 axis=0,
             )
+            logging.debug("Probabilities: " + str(probabilities))
 
         # Play randomly for the first 45 steps
         if self.step < 45:
