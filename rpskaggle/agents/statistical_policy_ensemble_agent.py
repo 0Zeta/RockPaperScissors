@@ -27,6 +27,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             TransitionMatrixPolicy(),
             TransitionTensorPolicy(),
             RandomForestPolicy(20, 20, 5),
+            MaxHistoryPolicy(15),
         ]
         # Add some popular sequences
         for seq_name, seq in SEQUENCES.items():
@@ -43,6 +44,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             CounterPolicy(CopyLastActionPolicy()),
             CounterPolicy(TransitionMatrixPolicy()),
             CounterPolicy(TransitionTensorPolicy()),
+            CounterPolicy(MaxHistoryPolicy(15)),
         ]
         self.strict_counter_policies = [
             StrictPolicy(policy)
@@ -123,7 +125,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 window_probs.append(p)
                 # Save the probabilities to evaluate the performance of this window size in the next step
                 self.last_probabilities_by_window_size[window_size] = p
-                logging.debug("Window size " + str(window_size) + " probabilities: " + str(p))
+                logging.debug(
+                    "Window size " + str(window_size) + " probabilities: " + str(p)
+                )
 
             # Determine the performance scores for the window sizes and calculate their respective weights
             window_scores = self.window_sizes_performance.sum(axis=0)

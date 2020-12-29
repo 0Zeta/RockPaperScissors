@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List
 from sklearn.ensemble import RandomForestClassifier
 
@@ -108,7 +109,7 @@ class SequencePolicy(Policy):
     def __init__(self, sequence: List[int], sequence_name: str):
         super().__init__()
         self.sequence = sequence
-        self.name = sequence_name + '_sequence_policy'
+        self.name = sequence_name + "_sequence_policy"
         self.is_deterministic = True
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
@@ -213,15 +214,38 @@ class TransitionTensorPolicy(Policy):
 class MaxHistoryPolicy(Policy):
     """
     searches for similar situations in the game history and assumes the past is doomed to repeat itself
+    prefers the longest matching sequence
     """
 
-    def __init(self):
+    def __init__(self, max_sequence_length: int):
         super().__init__()
         self.name = "max_history_policy"
+        self.max_sequence_length = max_sequence_length
+        self.sequences = defaultdict(lambda: np.zeros((3,), dtype=np.int))
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
-        # TODO: implement
-        pass
+        if len(history) < 2:
+            # return equal probabilities at the start of the game
+            return EQUAL_PROBS
+        # Update the stored sequences with the opponent´s last move
+        for sequence_length in range(
+            1, min(len(history) - 1, self.max_sequence_length) + 1
+        ):
+            sequence = np.array2string(
+                history.iloc[-sequence_length - 1 : -1].to_numpy()
+            )
+            self.sequences[sequence][int(history.loc[step - 1, "opponent_action"])] += 1
+        # Try to find a match for the current history and get the corresponding probabilities
+        for sequence_length in range(
+            min(len(history), self.max_sequence_length), 0, -1
+        ):
+            # Determine whether the sequence has already occurred
+            sequence = np.array2string(history.iloc[-sequence_length:].to_numpy())
+            if sequence not in self.sequences.keys():
+                continue
+            # Return the corresponding probabilities
+            return self.sequences[sequence] / sum(self.sequences[sequence])
+        return EQUAL_PROBS
 
 
 class RandomForestPolicy(Policy):
