@@ -28,6 +28,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             TransitionTensorPolicy(),
             RandomForestPolicy(20, 20, 5),
             MaxHistoryPolicy(15),
+            MaxOpponentHistoryPolicy(15),
         ]
         # Add some popular sequences
         for seq_name, seq in SEQUENCES.items():
@@ -45,6 +46,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             CounterPolicy(TransitionMatrixPolicy()),
             CounterPolicy(TransitionTensorPolicy()),
             CounterPolicy(MaxHistoryPolicy(15)),
+            CounterPolicy(MaxOpponentHistoryPolicy(15)),
         ]
         self.strict_counter_policies = [
             StrictPolicy(policy)

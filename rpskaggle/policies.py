@@ -232,7 +232,7 @@ class MaxHistoryPolicy(Policy):
             1, min(len(history) - 1, self.max_sequence_length) + 1
         ):
             sequence = np.array2string(
-                history.iloc[-sequence_length - 1 : -1].to_numpy()
+                history.iloc[-sequence_length - 1:-1].to_numpy()
             )
             self.sequences[sequence][int(history.loc[step - 1, "opponent_action"])] += 1
         # Try to find a match for the current history and get the corresponding probabilities
@@ -241,6 +241,42 @@ class MaxHistoryPolicy(Policy):
         ):
             # Determine whether the sequence has already occurred
             sequence = np.array2string(history.iloc[-sequence_length:].to_numpy())
+            if sequence not in self.sequences.keys():
+                continue
+            # Return the corresponding probabilities
+            return self.sequences[sequence] / sum(self.sequences[sequence])
+        return EQUAL_PROBS
+
+
+class MaxOpponentHistoryPolicy(Policy):
+    """
+    like MaxHistoryPolicy, but only looks at the moves of the opponent
+    """
+
+    def __init__(self, max_sequence_length: int):
+        super().__init__()
+        self.name = "max_opponent_history_policy"
+        self.max_sequence_length = max_sequence_length
+        self.sequences = defaultdict(lambda: np.zeros((3,), dtype=np.int))
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        if len(history) < 2:
+            # return equal probabilities at the start of the game
+            return EQUAL_PROBS
+        # Update the stored sequences with the opponent´s last move
+        for sequence_length in range(
+            1, min(len(history) - 1, self.max_sequence_length) + 1
+        ):
+            sequence = np.array2string(
+                history.iloc[-sequence_length - 1:-1][['opponent_action']].to_numpy()
+            )
+            self.sequences[sequence][int(history.loc[step - 1, "opponent_action"])] += 1
+        # Try to find a match for the current history and get the corresponding probabilities
+        for sequence_length in range(
+            min(len(history), self.max_sequence_length), 0, -1
+        ):
+            # Determine whether the sequence has already occurred
+            sequence = np.array2string(history.iloc[-sequence_length:][['opponent_action']].to_numpy())
             if sequence not in self.sequences.keys():
                 continue
             # Return the corresponding probabilities
