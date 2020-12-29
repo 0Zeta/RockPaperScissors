@@ -100,6 +100,21 @@ class AlternatePolicy(Policy):
         return self.policies[self.current_policy]._get_probs(step, score, history)
 
 
+class SequencePolicy(Policy):
+    """
+    chooses actions from a specified sequence
+    """
+
+    def __init__(self, sequence: List[int], sequence_name: str):
+        super().__init__()
+        self.sequence = sequence
+        self.name = sequence_name + '_sequence_policy'
+        self.is_deterministic = True
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        return one_hot(self.sequence[step] % 3)
+
+
 class FrequencyPolicy(Policy):
     """
     chooses actions based on the frequency of the opponent´s last actions

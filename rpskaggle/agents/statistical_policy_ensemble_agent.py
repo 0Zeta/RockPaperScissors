@@ -19,7 +19,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
 
         # Initialize the different sets of policies
         self.random_policies = [RandomPolicy()]
-        # Policies that shouldn´t receive a counter policy
+        # Policies we shouldn´t derive incremented ones from
         self.basic_policies = [RockPolicy(), PaperPolicy(), ScissorsPolicy()]
         self.advanced_policies = [
             FrequencyPolicy(),
@@ -28,6 +28,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             TransitionTensorPolicy(),
             RandomForestPolicy(20, 20, 5),
         ]
+        # Add some popular sequences
+        for seq_name, seq in SEQUENCES.items():
+            self.advanced_policies.append(SequencePolicy(seq, seq_name))
         # Strict versions of the advanced policies
         self.strict_policies = [
             StrictPolicy(policy)
