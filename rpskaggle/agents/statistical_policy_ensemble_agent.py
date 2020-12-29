@@ -106,7 +106,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             for window_size in self.window_sizes:
                 policy_scores = self.policies_performance.tail(window_size).sum(axis=0)
                 # logging.debug(policy_scores)
-                policy_scores = policy_scores.to_numpy() / max(window_size / 180, 1)
+                policy_scores = policy_scores.to_numpy() / 5
                 policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(
                     np.exp(policy_scores - np.max(policy_scores))
                 )
@@ -130,7 +130,6 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 window_weights.reshape((window_weights.size, 1)) * window_probs,
                 axis=0,
             )
-            logging.debug('Step ' + str(self.step) + ' probabilities: ' + str(probabilities))
 
         # Play randomly for the first 45 steps
         if self.step < 45:
