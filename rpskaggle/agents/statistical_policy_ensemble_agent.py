@@ -47,6 +47,8 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             CounterPolicy(TransitionTensorPolicy()),
             CounterPolicy(MaxHistoryPolicy(15)),
             CounterPolicy(MaxOpponentHistoryPolicy(15)),
+            CounterPolicy(WinTieLosePolicy(0, 1, 1)),
+            CounterPolicy(WinTieLosePolicy(0, 2, 2)),
         ]
         self.strict_counter_policies = [
             StrictPolicy(policy)

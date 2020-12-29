@@ -329,6 +329,34 @@ class RandomForestPolicy(Policy):
         return np.roll(one_hot(int(prediction[0])), 1)
 
 
+class WinTieLosePolicy(Policy):
+    """
+    chooses the next move based on the result of the last one, e.g. repeats winning moves and switches when losing
+    """
+
+    def __init__(self, on_win: int, on_tie: int, on_lose: int):
+        super().__init__()
+        self.name = "on_win_" + str(on_win) + "_on_tie_" + str(on_tie) + "_on_lose_" + str(on_lose) + "_policy"
+        self.is_deterministic = True
+        self.on_win = on_win
+        self.on_tie = on_tie
+        self.on_lose = on_lose
+        self.last_score = 0
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        if len(history) < 1:
+            # Return equal probabilities on the first step
+            return EQUAL_PROBS
+        result = score - self.last_score
+        self.last_score = score
+        if result == 1:
+            shift = self.on_win
+        elif result == 0:
+            shift = self.on_tie
+        else:
+            shift = self.on_lose
+        return one_hot((int(history.loc[step - 1, 'action']) + shift) % 3)
+
 class RockPolicy(Policy):
     """
     chooses Rock the whole time
