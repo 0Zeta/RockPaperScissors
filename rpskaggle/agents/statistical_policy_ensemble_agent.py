@@ -150,9 +150,13 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             )
             logging.debug("Probabilities: " + str(probabilities))
 
-        # Play randomly for the first 45 steps
-        if self.step < 45:
-            return randint(0, 2)
+        # Play randomly for the first 100-200 steps
+        if self.step < 100 + randint(0, 100):
+            action = randint(0, 2)
+            if randint(0, 3) == 1:
+                # We don´t want our random seed to be cracked.
+                action = (action + 1) % SIGNS
+            return action
         if self.strict_agent:
             action = int(np.argmax(probabilities))
         else:
