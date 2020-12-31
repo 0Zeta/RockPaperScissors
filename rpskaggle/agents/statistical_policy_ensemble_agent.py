@@ -134,7 +134,12 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 )
 
             # Determine the performance scores for the window sizes and calculate their respective weights
-            window_scores = self.window_sizes_performance.sum(axis=0)
+            # Use the last 20 steps
+            window_scores = (
+                self.window_sizes_performance.sum(axis=0)
+                if len(self.window_sizes_performance) <= 20
+                else self.window_sizes_performance.iloc[-20:].sum(axis=0)
+            )
             window_scores = window_scores.to_numpy() / 5
             window_weights = np.exp(window_scores - np.max(window_scores)) / sum(
                 np.exp(window_scores - np.max(window_scores))

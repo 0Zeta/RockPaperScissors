@@ -232,7 +232,7 @@ class MaxHistoryPolicy(Policy):
             1, min(len(history) - 1, self.max_sequence_length) + 1
         ):
             sequence = np.array2string(
-                history.iloc[-sequence_length - 1:-1].to_numpy()
+                history.iloc[-sequence_length - 1 : -1].to_numpy()
             )
             self.sequences[sequence][int(history.loc[step - 1, "opponent_action"])] += 1
         # Try to find a match for the current history and get the corresponding probabilities
@@ -268,7 +268,7 @@ class MaxOpponentHistoryPolicy(Policy):
             1, min(len(history) - 1, self.max_sequence_length) + 1
         ):
             sequence = np.array2string(
-                history.iloc[-sequence_length - 1:-1][['opponent_action']].to_numpy()
+                history.iloc[-sequence_length - 1 : -1][["opponent_action"]].to_numpy()
             )
             self.sequences[sequence][int(history.loc[step - 1, "opponent_action"])] += 1
         # Try to find a match for the current history and get the corresponding probabilities
@@ -276,7 +276,9 @@ class MaxOpponentHistoryPolicy(Policy):
             min(len(history), self.max_sequence_length), 0, -1
         ):
             # Determine whether the sequence has already occurred
-            sequence = np.array2string(history.iloc[-sequence_length:][['opponent_action']].to_numpy())
+            sequence = np.array2string(
+                history.iloc[-sequence_length:][["opponent_action"]].to_numpy()
+            )
             if sequence not in self.sequences.keys():
                 continue
             # Return the corresponding probabilities
@@ -336,7 +338,15 @@ class WinTieLosePolicy(Policy):
 
     def __init__(self, on_win: int, on_tie: int, on_lose: int):
         super().__init__()
-        self.name = "on_win_" + str(on_win) + "_on_tie_" + str(on_tie) + "_on_lose_" + str(on_lose) + "_policy"
+        self.name = (
+            "on_win_"
+            + str(on_win)
+            + "_on_tie_"
+            + str(on_tie)
+            + "_on_lose_"
+            + str(on_lose)
+            + "_policy"
+        )
         self.is_deterministic = True
         self.on_win = on_win
         self.on_tie = on_tie
@@ -355,7 +365,8 @@ class WinTieLosePolicy(Policy):
             shift = self.on_tie
         else:
             shift = self.on_lose
-        return one_hot((int(history.loc[step - 1, 'action']) + shift) % 3)
+        return one_hot((int(history.loc[step - 1, "action"]) + shift) % 3)
+
 
 class RockPolicy(Policy):
     """
