@@ -13,7 +13,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
     for the agent´s actions
     """
 
-    def __init__(self, configuration, strict: bool = True):
+    def __init__(self, configuration, strict: bool = False):
         super().__init__(configuration)
         self.strict_agent = strict
         # Initialize the different sets of policies
@@ -138,12 +138,8 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
 
             # Determine the performance scores for the window sizes and calculate their respective weights
             # Use the last 50 steps
-            window_scores = (
-                self.window_sizes_performance.sum(axis=0)
-                if len(self.window_sizes_performance) <= 50
-                else self.window_sizes_performance.iloc[-50:].sum(axis=0)
-            )
-            window_scores = window_scores.to_numpy()
+            window_scores = self.window_sizes_performance.sum(axis=0)
+            window_scores = window_scores.to_numpy() / 5
             window_weights = np.exp(window_scores - np.max(window_scores)) / sum(
                 np.exp(window_scores - np.max(window_scores))
             )
