@@ -2,7 +2,6 @@ import logging
 from random import randint
 from rpskaggle.policies import *
 
-
 logging.basicConfig(level=logging.INFO)
 
 
@@ -14,9 +13,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
     for the agent´s actions
     """
 
-    def __init__(self, configuration):
+    def __init__(self, configuration, strict: bool = True):
         super().__init__(configuration)
-
+        self.strict_agent = strict
         # Initialize the different sets of policies
         self.random_policies = [RandomPolicy()]
         # Policies we shouldn´t derive incremented ones from
@@ -77,6 +76,8 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             + self.counter_policies
             + self.strict_counter_policies
         )
+        if self.strict_agent:
+            self.policies = [policy for policy in self.policies if policy.is_deterministic]
         self.name_to_policy = {policy.name: policy for policy in self.policies}
 
         # The different options for how many of the last steps are taken into account when calculating a policy´s performance
@@ -126,6 +127,8 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                     policy_weights.reshape((policy_weights.size, 1)) * policy_probs,
                     axis=0,
                 )
+                if self.strict_agent:
+                    p = one_hot(int(np.argmax(p)))
                 window_probs.append(p)
                 # Save the probabilities to evaluate the performance of this window size in the next step
                 self.last_probabilities_by_window_size[window_size] = p
@@ -134,13 +137,13 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 )
 
             # Determine the performance scores for the window sizes and calculate their respective weights
-            # Use the last 20 steps
+            # Use the last 50 steps
             window_scores = (
                 self.window_sizes_performance.sum(axis=0)
-                if len(self.window_sizes_performance) <= 20
-                else self.window_sizes_performance.iloc[-20:].sum(axis=0)
+                if len(self.window_sizes_performance) <= 50
+                else self.window_sizes_performance.iloc[-50:].sum(axis=0)
             )
-            window_scores = window_scores.to_numpy() / 5
+            window_scores = window_scores.to_numpy()
             window_weights = np.exp(window_scores - np.max(window_scores)) / sum(
                 np.exp(window_scores - np.max(window_scores))
             )
@@ -154,6 +157,8 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         # Play randomly for the first 45 steps
         if self.step < 45:
             return randint(0, 2)
+        if self.strict_agent:
+            return int(np.argmax(probabilities))
         return int(np.random.choice(range(SIGNS), p=probabilities))
 
     def update_performance(self):
