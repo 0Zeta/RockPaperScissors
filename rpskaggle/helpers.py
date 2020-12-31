@@ -81,13 +81,14 @@ def counters(actions: pd.Series) -> pd.Series:
     return (actions + 1) % SIGNS
 
 
-def get_score(history: pd.DataFrame) -> int:
+def get_score(history: pd.DataFrame, steps: int = -1) -> int:
     score = 0
+    relevant = history if steps < 0 else history.iloc[-steps:]
     score += len(
-        history[((history["opponent_action"] + 1) % SIGNS) == history["action"]]
+        relevant[((relevant["opponent_action"] + 1) % SIGNS) == relevant["action"]]
     )
     score -= len(
-        history[((history["action"] + 1) % SIGNS) == history["opponent_action"]]
+        relevant[((relevant["action"] + 1) % SIGNS) == relevant["opponent_action"]]
     )
     return score
 

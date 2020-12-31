@@ -154,8 +154,15 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         if self.step < 45:
             return randint(0, 2)
         if self.strict_agent:
-            return int(np.argmax(probabilities))
-        return int(np.random.choice(range(SIGNS), p=probabilities))
+            action = int(np.argmax(probabilities))
+        else:
+            action = int(np.random.choice(range(SIGNS), p=probabilities))
+        if get_score(self.history, 15) < -5:
+            # If we got outplayed in the last 15 steps, play the counter of the chosen action´s counter with a
+            # certain probability
+            if randint(0, 100) <= 40:
+                action = (action + 2) % SIGNS
+        return action
 
     def update_performance(self):
         # Determine the scores for the different actions (Win: 1, Tie: 0, Loss: -1)
