@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from typing import List
 from sklearn.ensemble import RandomForestClassifier
@@ -114,6 +115,33 @@ class SequencePolicy(Policy):
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         return one_hot(self.sequence[step] % 3)
+
+
+class RPSContestPolicy(Policy):
+    """
+    a wrapper to run RPS Contest bots
+    Adapted from https://www.kaggle.com/purplepuppy/running-rpscontest-bots
+    """
+
+    def __init__(self, code, agent_name):
+        super().__init__()
+        self.name = agent_name + "_policy"
+        self.is_deterministic = True
+        self.code = compile(code, '<string>', 'exec')
+        self.gg = dict()
+        self.symbols = {'R': 0, 'P': 1, 'S': 2}
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        try:
+            inp = '' if len(history) < 1 else 'RPS'[int(history.loc[step - 1, 'opponent_action'])]
+            out = '' if len(history) < 1 else 'RPS'[int(history.loc[step - 1, 'action'])]
+            self.gg['input'] = inp
+            self.gg['output'] = out
+            exec(self.code, self.gg)
+            return one_hot(self.symbols[self.gg['output']])
+        except Exception as exception:
+            logging.error("An error ocurred in " + self.name + " : " + str(exception))
+            return EQUAL_PROBS
 
 
 class FrequencyPolicy(Policy):

@@ -32,6 +32,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         # Add some popular sequences
         for seq_name, seq in SEQUENCES.items():
             self.advanced_policies.append(SequencePolicy(seq, seq_name))
+        # Add some RPS Contest bots to the ensemble
+        for agent_name, code in RPSCONTEST_BOTS.items():
+            self.advanced_policies.append(RPSContestPolicy(code, agent_name))
         # Strict versions of the advanced policies
         self.strict_policies = [
             StrictPolicy(policy)
@@ -49,6 +52,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             CounterPolicy(WinTieLosePolicy(0, 1, 1)),
             CounterPolicy(WinTieLosePolicy(0, 2, 2)),
         ]
+        # Add some RPS Contest bots to the ensemble
+        for agent_name, code in RPSCONTEST_BOTS.items():
+            self.counter_policies.append(CounterPolicy(RPSContestPolicy(code, agent_name)))
         self.strict_counter_policies = [
             StrictPolicy(policy)
             for policy in self.counter_policies
@@ -98,7 +104,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         self.window_sizes_performance.set_index("step", inplace=True)
 
     def act(self) -> int:
-        logging.debug("Begin step " + str(self.step))
+        logging.info("Step " + str(self.step) + " | score: " + str(self.score))
         if len(self.history) > 0:
             # Update the historical performance for each policy and for each window size
             self.update_performance()
