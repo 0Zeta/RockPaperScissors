@@ -17,6 +17,9 @@ RPSCONTEST_BOTS = {
     'centrifugal_bumblepuppy_4': CENTRIFUGAL_BUMBLEPUPPY_4,
     'io2_fightinguuu': IO2_FIGHTINGUUU,
     'dllu1': DLLU1,
+    'rps_meta_fix': RPS_META_FIX,
+    'are_you_a_lucker': ARE_YOU_A_LUCKER,
+    'bayes14': BAYES_14,
 }
 
 
