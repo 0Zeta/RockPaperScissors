@@ -127,18 +127,24 @@ class RPSContestPolicy(Policy):
         super().__init__()
         self.name = agent_name + "_policy"
         self.is_deterministic = True
-        self.code = compile(code, '<string>', 'exec')
+        self.code = compile(code, "<string>", "exec")
         self.gg = dict()
-        self.symbols = {'R': 0, 'P': 1, 'S': 2}
+        self.symbols = {"R": 0, "P": 1, "S": 2}
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         try:
-            inp = '' if len(history) < 1 else 'RPS'[int(history.loc[step - 1, 'opponent_action'])]
-            out = '' if len(history) < 1 else 'RPS'[int(history.loc[step - 1, 'action'])]
-            self.gg['input'] = inp
-            self.gg['output'] = out
+            inp = (
+                ""
+                if len(history) < 1
+                else "RPS"[int(history.loc[step - 1, "opponent_action"])]
+            )
+            out = (
+                "" if len(history) < 1 else "RPS"[int(history.loc[step - 1, "action"])]
+            )
+            self.gg["input"] = inp
+            self.gg["output"] = out
             exec(self.code, self.gg)
-            return one_hot(self.symbols[self.gg['output']])
+            return one_hot(self.symbols[self.gg["output"]])
         except Exception as exception:
             logging.error("An error ocurred in " + self.name + " : " + str(exception))
             return EQUAL_PROBS

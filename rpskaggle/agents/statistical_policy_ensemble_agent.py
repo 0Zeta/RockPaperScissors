@@ -1,4 +1,5 @@
 import logging
+import math
 from random import randint
 from rpskaggle.policies import *
 
@@ -54,7 +55,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         ]
         # Add some RPS Contest bots to the ensemble
         for agent_name, code in RPSCONTEST_BOTS.items():
-            self.counter_policies.append(CounterPolicy(RPSContestPolicy(code, agent_name)))
+            self.counter_policies.append(
+                CounterPolicy(RPSContestPolicy(code, agent_name))
+            )
         self.strict_counter_policies = [
             StrictPolicy(policy)
             for policy in self.counter_policies
@@ -83,28 +86,34 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             + self.strict_counter_policies
         )
         if self.strict_agent:
-            self.policies = [policy for policy in self.policies if policy.is_deterministic]
+            self.policies = [
+                policy for policy in self.policies if policy.is_deterministic
+            ]
         self.name_to_policy = {policy.name: policy for policy in self.policies}
 
-        # The different options for how many of the last steps are taken into account when calculating a policy´s performance
-        self.window_sizes = [5, 10, 50, 100, 350, 650, 1000]
+        # The different decay values
+        self.decay_values = [0.7, 0.8866, 0.9762, 0.9880, 0.9966, 0.99815, 0.9995, 1.0]
 
         # Create a data frame with the historical performance of the policies
         policy_names = [policy.name for policy in self.policies]
         self.policies_performance = pd.DataFrame(columns=["step"] + policy_names)
         self.policies_performance.set_index("step", inplace=True)
 
-        # Also record the performance of the different performance window sizes
-        self.last_probabilities_by_window_size = {
-            window_size: EQUAL_PROBS for window_size in self.window_sizes
-        }
-        self.window_sizes_performance = pd.DataFrame(
-            columns=["step"] + [str(size) for size in self.window_sizes]
+        # The last scores for each decay value
+        self.policy_scores_by_decay = np.zeros(
+            (len(self.decay_values), len(self.policies)), dtype=np.float64
         )
-        self.window_sizes_performance.set_index("step", inplace=True)
+
+        # Also record the performance of the different decay values
+        self.last_probabilities_by_decay = {
+            decay: EQUAL_PROBS for decay in self.decay_values
+        }
+        self.decays_performance = pd.DataFrame(
+            columns=["step"] + [str(size) for size in self.decay_values]
+        )
+        self.decays_performance.set_index("step", inplace=True)
 
     def act(self) -> int:
-        logging.info("Step " + str(self.step) + " | score: " + str(self.score))
         if len(self.history) > 0:
             # Update the historical performance for each policy and for each window size
             self.update_performance()
@@ -118,13 +127,13 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         )
 
         if len(self.history) > 0:
-            # Determine the performance scores of the policies for each window size and calculate their respective weights using softmax
-            window_probs = []
-            for window_size in self.window_sizes:
-                policy_scores = self.policies_performance.tail(window_size).sum(axis=0)
-                if window_size == self.window_sizes[-1]:
-                    logging.debug(policy_scores)
-                policy_scores = policy_scores.to_numpy() / max(window_size / 200, 2)
+            # Determine the performance scores of the policies for each decay value and calculate their respective weights using softmax
+            decay_probs = []
+            for decay_index, decay in enumerate(self.decay_values):
+                policy_scores = self.policy_scores_by_decay[decay_index, :]
+                policy_scores = policy_scores / min(
+                    max(math.log(decay, 0.3) / 200, 1), 5
+                )
                 policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(
                     np.exp(policy_scores - np.max(policy_scores))
                 )
@@ -135,26 +144,31 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 )
                 if self.strict_agent:
                     p = one_hot(int(np.argmax(p)))
-                window_probs.append(p)
+                decay_probs.append(p)
                 # Save the probabilities to evaluate the performance of this window size in the next step
-                self.last_probabilities_by_window_size[window_size] = p
-                logging.debug(
-                    "Window size " + str(window_size) + " probabilities: " + str(p)
-                )
+                self.last_probabilities_by_decay[decay] = p
+                logging.debug("Window size " + str(decay) + " probabilities: " + str(p))
 
             # Determine the performance scores for the window sizes and calculate their respective weights
             # Use the last 50 steps
-            window_scores = self.window_sizes_performance.sum(axis=0)
+            window_scores = self.decays_performance.sum(axis=0)
             window_scores = window_scores.to_numpy() / 5
             window_weights = np.exp(window_scores - np.max(window_scores)) / sum(
                 np.exp(window_scores - np.max(window_scores))
             )
             # Calculate the resulting probabilities for the possible actions
             probabilities = np.sum(
-                window_weights.reshape((window_weights.size, 1)) * window_probs,
+                window_weights.reshape((window_weights.size, 1)) * decay_probs,
                 axis=0,
             )
-            logging.debug("Probabilities: " + str(probabilities))
+            logging.info(
+                "Step "
+                + str(self.step)
+                + " | score: "
+                + str(self.score)
+                + " probabilities: "
+                + str(probabilities)
+            )
 
         # Play randomly for the first 100-200 steps
         if self.step < 100 + randint(0, 100):
@@ -189,13 +203,18 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             # Save the score to the performance data frame
             self.policies_performance.loc[self.step - 1, policy_name] = score
 
-        # Window sizes
-        for window_size in self.window_sizes:
+        # Decay values
+        for decay_index, decay in enumerate(self.decay_values):
             # Calculate the score for the last step
-            probs = self.last_probabilities_by_window_size[window_size]
+            probs = self.last_probabilities_by_decay[decay]
             score = np.sum(probs * scores)
+            # Apply the decay to the current score and add the new scores
+            self.policy_scores_by_decay[decay_index] = (
+                self.policy_scores_by_decay[decay_index] * decay
+                + self.policies_performance.loc[self.step - 1, :].to_numpy()
+            )
             # Save the score to the performance data frame
-            self.window_sizes_performance.loc[self.step - 1, str(window_size)] = score
+            self.decays_performance.loc[self.step - 1, str(decay)] = score
 
 
 AGENT = None
