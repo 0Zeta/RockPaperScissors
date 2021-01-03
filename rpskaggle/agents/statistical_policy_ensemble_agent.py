@@ -92,7 +92,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         self.name_to_policy = {policy.name: policy for policy in self.policies}
 
         # The different decay values
-        self.decay_values = [0.7, 0.8866, 0.9762, 0.9880, 0.9966, 0.99815, 0.9995, 1.0]
+        self.decay_values = [0.7, 0.8866, 0.93, 0.9762, 0.9880, 0.9966, 0.99815, 0.9995, 1.0]
 
         # Create a data frame with the historical performance of the policies
         policy_names = [policy.name for policy in self.policies]
@@ -115,7 +115,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
 
     def act(self) -> int:
         if len(self.history) > 0:
-            # Update the historical performance for each policy and for each window size
+            # Update the historical performance for each policy and for each decay value
             self.update_performance()
 
         # Get the new probabilities from every policy
@@ -132,7 +132,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             for decay_index, decay in enumerate(self.decay_values):
                 policy_scores = self.policy_scores_by_decay[decay_index, :]
                 policy_scores = policy_scores / min(
-                    max(math.log(decay, 0.3) / 200, 1), 5
+                    max(np.median(np.abs(policy_scores)), 1), 5
                 )
                 policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(
                     np.exp(policy_scores - np.max(policy_scores))
@@ -145,7 +145,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 if self.strict_agent:
                     p = one_hot(int(np.argmax(p)))
                 decay_probs.append(p)
-                # Save the probabilities to evaluate the performance of this window size in the next step
+                # Save the probabilities to evaluate the performance of this decay value in the next step
                 self.last_probabilities_by_decay[decay] = p
                 logging.debug("Window size " + str(decay) + " probabilities: " + str(p))
 
@@ -156,6 +156,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             window_weights = np.exp(window_scores - np.max(window_scores)) / sum(
                 np.exp(window_scores - np.max(window_scores))
             )
+            #logging.info(window_weights)
             # Calculate the resulting probabilities for the possible actions
             probabilities = np.sum(
                 window_weights.reshape((window_weights.size, 1)) * decay_probs,
