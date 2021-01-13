@@ -3,7 +3,7 @@ import math
 from random import randint
 from rpskaggle.policies import *
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 
 class StatisticalPolicyEnsembleAgent(RPSAgent):
@@ -17,74 +17,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
     def __init__(self, configuration, strict: bool = False):
         super().__init__(configuration)
         self.strict_agent = strict
-        # Initialize the different sets of policies
-        self.random_policies = [RandomPolicy()]
-        # Policies we shouldn´t derive incremented ones from
-        self.basic_policies = [RockPolicy(), PaperPolicy(), ScissorsPolicy()]
-        self.advanced_policies = [
-            FrequencyPolicy(),
-            CopyLastActionPolicy(),
-            TransitionMatrixPolicy(),
-            TransitionTensorPolicy(),
-            RandomForestPolicy(20, 20, 5),
-            MaxHistoryPolicy(15),
-            MaxOpponentHistoryPolicy(15),
-        ]
-        # Add some popular sequences
-        for seq_name, seq in SEQUENCES.items():
-            self.advanced_policies.append(SequencePolicy(seq, seq_name))
-        # Add some RPS Contest bots to the ensemble
-        for agent_name, code in RPSCONTEST_BOTS.items():
-            self.advanced_policies.append(RPSContestPolicy(code, agent_name))
-        # Strict versions of the advanced policies
-        self.strict_policies = [
-            StrictPolicy(policy)
-            for policy in self.advanced_policies
-            if not policy.is_deterministic
-        ]
-        # Counter policies
-        self.counter_policies = [
-            CounterPolicy(FrequencyPolicy()),
-            CounterPolicy(CopyLastActionPolicy()),
-            CounterPolicy(TransitionMatrixPolicy()),
-            CounterPolicy(TransitionTensorPolicy()),
-            CounterPolicy(MaxHistoryPolicy(15)),
-            CounterPolicy(MaxOpponentHistoryPolicy(15)),
-            CounterPolicy(WinTieLosePolicy(0, 1, 1)),
-            CounterPolicy(WinTieLosePolicy(0, 2, 2)),
-        ]
-        # Add some RPS Contest bots to the ensemble
-        for agent_name, code in RPSCONTEST_BOTS.items():
-            self.counter_policies.append(
-                CounterPolicy(RPSContestPolicy(code, agent_name))
-            )
-        self.strict_counter_policies = [
-            StrictPolicy(policy)
-            for policy in self.counter_policies
-            if not policy.is_deterministic
-        ]
-        # Sicilian reasoning
-        self.incremented_policies = [
-            IncrementPolicy(policy)
-            for policy in (
-                self.advanced_policies
-                + self.strict_policies
-                + self.counter_policies
-                + self.strict_counter_policies
-            )
-        ]
-        self.double_incremented_policies = [
-            IncrementPolicy(policy) for policy in self.incremented_policies
-        ]
-        self.policies = (
-            self.random_policies
-            + self.advanced_policies
-            + self.strict_policies
-            + self.incremented_policies
-            + self.double_incremented_policies
-            + self.counter_policies
-            + self.strict_counter_policies
-        )
+        self.policies = get_policies()
         if self.strict_agent:
             self.policies = [
                 policy for policy in self.policies if policy.is_deterministic
@@ -163,7 +96,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 axis=0,
             )
             logging.info(
-                "Step "
+                "Statistical Policy Ensemble | Step "
                 + str(self.step)
                 + " | score: "
                 + str(self.score)

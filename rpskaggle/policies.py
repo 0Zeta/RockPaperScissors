@@ -445,3 +445,78 @@ class ScissorsPolicy(Policy):
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         return self.probs
+
+
+def get_policies():
+    """
+    Returns a list of many polices
+    """
+    # Initialize the different sets of policies
+    random_policies = [RandomPolicy()]
+    # Policies we shouldn´t derive incremented ones from
+    basic_policies = [RockPolicy(), PaperPolicy(), ScissorsPolicy()]
+    advanced_policies = [
+        FrequencyPolicy(),
+        CopyLastActionPolicy(),
+        TransitionMatrixPolicy(),
+        TransitionTensorPolicy(),
+        RandomForestPolicy(20, 20, 5),
+        MaxHistoryPolicy(15),
+        MaxOpponentHistoryPolicy(15),
+    ]
+    # Add some popular sequences
+    for seq_name, seq in SEQUENCES.items():
+        advanced_policies.append(SequencePolicy(seq, seq_name))
+    # Add some RPS Contest bots to the ensemble
+    for agent_name, code in RPSCONTEST_BOTS.items():
+        advanced_policies.append(RPSContestPolicy(code, agent_name))
+    # Strict versions of the advanced policies
+    strict_policies = [
+        StrictPolicy(policy)
+        for policy in advanced_policies
+        if not policy.is_deterministic
+    ]
+    # Counter policies
+    counter_policies = [
+        CounterPolicy(FrequencyPolicy()),
+        CounterPolicy(CopyLastActionPolicy()),
+        CounterPolicy(TransitionMatrixPolicy()),
+        CounterPolicy(TransitionTensorPolicy()),
+        CounterPolicy(MaxHistoryPolicy(15)),
+        CounterPolicy(MaxOpponentHistoryPolicy(15)),
+        CounterPolicy(WinTieLosePolicy(0, 1, 1)),
+        CounterPolicy(WinTieLosePolicy(0, 2, 2)),
+    ]
+    # Add some RPS Contest bots to the ensemble
+    for agent_name, code in RPSCONTEST_BOTS.items():
+        counter_policies.append(
+            CounterPolicy(RPSContestPolicy(code, agent_name))
+        )
+    strict_counter_policies = [
+        StrictPolicy(policy)
+        for policy in counter_policies
+        if not policy.is_deterministic
+    ]
+    # Sicilian reasoning
+    incremented_policies = [
+        IncrementPolicy(policy)
+        for policy in (
+                advanced_policies
+                + strict_policies
+                + counter_policies
+                + strict_counter_policies
+        )
+    ]
+    double_incremented_policies = [
+        IncrementPolicy(policy) for policy in incremented_policies
+    ]
+    policies = (
+            random_policies
+            + advanced_policies
+            + strict_policies
+            + incremented_policies
+            + double_incremented_policies
+            + counter_policies
+            + strict_counter_policies
+    )
+    return policies
