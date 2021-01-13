@@ -17,7 +17,7 @@ class MultiArmedBandit(RPSAgent):
         policy_names = [policy.name for policy in self.policies]
 
         # Use one fixed decay value  TODO: use multiple different decays, points per win/loss and reset probabilities
-        self.decays = [0.9]
+        self.decays = [0.97]
         self.scores_by_decay = np.full(
             (len(self.decays), len(self.policies), 2), fill_value=0.1, dtype=np.float
         )
@@ -119,14 +119,7 @@ class MultiArmedBandit(RPSAgent):
             ] = probs[losing_action] * self.loss - (
                 probs[opponent_action] * self.tie if self.tie < 0 else 0
             )
-            # Reset after a loss
-            if probs[losing_action] > 0.5:
-                if np.random.random() < self.reset_prob:
-                    self.scores_by_decay[
-                        self.scores_by_decay[:, policy_index, 0]
-                        > self.scores_by_decay[:, policy_index, 1],
-                        policy_index,
-                    ] = 0.1
+
 
         # Apply the different decay values
         for decay_index, decay in enumerate(self.decays):

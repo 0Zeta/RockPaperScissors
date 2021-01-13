@@ -24,8 +24,22 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             ]
         self.name_to_policy = {policy.name: policy for policy in self.policies}
 
-        # The different decay values
-        self.decay_values = [0.7, 0.8866, 0.93, 0.9762, 0.9880, 0.9966, 0.99815, 0.9995, 1.0]
+        # The different combinations of decay values, reset probabilities and zero clips
+        self.configurations = [
+            (0.7, 0.0, False),
+            (0.8866, 0.01, False),
+            (0.8866, 0.0, False),
+            (0.93, 0.05, False),
+            (0.93, 0.0, False),
+            (0.9762, 0.05, True),
+            (0.9880, 0.0, False),
+            (0.9880, 0.1, False),
+            (0.9966, 0.1, True),
+            (0.99815, 0.1, False),
+            (0.9995, 0.1, True),
+            (1.0, 0.1, True),
+            (1.0, 0.0, False),
+        ]
 
         # Create a data frame with the historical performance of the policies
         policy_names = [policy.name for policy in self.policies]
@@ -33,18 +47,18 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         self.policies_performance.set_index("step", inplace=True)
 
         # The last scores for each decay value
-        self.policy_scores_by_decay = np.zeros(
-            (len(self.decay_values), len(self.policies)), dtype=np.float64
+        self.policy_scores_by_configuration = np.zeros(
+            (len(self.configurations), len(self.policies)), dtype=np.float64
         )
 
         # Also record the performance of the different decay values
-        self.last_probabilities_by_decay = {
-            decay: EQUAL_PROBS for decay in self.decay_values
+        self.last_probabilities_by_configuration = {
+            decay: EQUAL_PROBS for decay in self.configurations
         }
-        self.decays_performance = pd.DataFrame(
-            columns=["step"] + [str(size) for size in self.decay_values]
+        self.configurations_performance = pd.DataFrame(
+            columns=["step"] + [str(size) for size in self.configurations]
         )
-        self.decays_performance.set_index("step", inplace=True)
+        self.configurations_performance.set_index("step", inplace=True)
 
     def act(self) -> int:
         if len(self.history) > 0:
@@ -60,10 +74,10 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         )
 
         if len(self.history) > 0:
-            # Determine the performance scores of the policies for each decay value and calculate their respective weights using softmax
-            decay_probs = []
-            for decay_index, decay in enumerate(self.decay_values):
-                policy_scores = self.policy_scores_by_decay[decay_index, :]
+            # Determine the performance scores of the policies for each configuration and calculate their respective weights using softmax
+            config_probs = []
+            for config_index, conf in enumerate(self.configurations):
+                policy_scores = self.policy_scores_by_configuration[config_index, :]
                 policy_scores = policy_scores / min(
                     max(np.median(np.abs(policy_scores)), 1), 5
                 )
@@ -77,22 +91,22 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 )
                 if self.strict_agent:
                     p = one_hot(int(np.argmax(p)))
-                decay_probs.append(p)
+                config_probs.append(p)
                 # Save the probabilities to evaluate the performance of this decay value in the next step
-                self.last_probabilities_by_decay[decay] = p
-                logging.debug("Window size " + str(decay) + " probabilities: " + str(p))
+                self.last_probabilities_by_configuration[conf] = p
+                logging.debug("Configuration " + str(conf) + " probabilities: " + str(p))
 
-            # Determine the performance scores for the window sizes and calculate their respective weights
+            # Determine the performance scores for the different configurations and calculate their respective weights
             # Use the last 50 steps
-            window_scores = self.decays_performance.sum(axis=0)
-            window_scores = window_scores.to_numpy() / 5
-            window_weights = np.exp(window_scores - np.max(window_scores)) / sum(
-                np.exp(window_scores - np.max(window_scores))
+            configuration_scores = self.configurations_performance.sum(axis=0)
+            configuration_scores = configuration_scores.to_numpy() / 5
+            configuration_weights = np.exp(configuration_scores - np.max(configuration_scores)) / sum(
+                np.exp(configuration_scores - np.max(configuration_scores))
             )
-            #logging.info(window_weights)
+            # logging.info(configuration_weights)
             # Calculate the resulting probabilities for the possible actions
             probabilities = np.sum(
-                window_weights.reshape((window_weights.size, 1)) * decay_probs,
+                configuration_weights.reshape((configuration_weights.size, 1)) * config_probs,
                 axis=0,
             )
             logging.info(
@@ -137,18 +151,25 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             # Save the score to the performance data frame
             self.policies_performance.loc[self.step - 1, policy_name] = score
 
-        # Decay values
-        for decay_index, decay in enumerate(self.decay_values):
+        #  Configurations
+        for config_index, config in enumerate(self.configurations):
+            decay, reset_prob, clip_zero = config
             # Calculate the score for the last step
-            probs = self.last_probabilities_by_decay[decay]
+            probs = self.last_probabilities_by_configuration[config]
             score = np.sum(probs * scores)
             # Apply the decay to the current score and add the new scores
-            self.policy_scores_by_decay[decay_index] = (
-                self.policy_scores_by_decay[decay_index] * decay
-                + self.policies_performance.loc[self.step - 1, :].to_numpy()
-            )
+            new_scores = self.policy_scores_by_configuration[config_index] * decay + self.policies_performance.loc[self.step - 1, :].to_numpy()
+            # Zero clip
+            if clip_zero:
+                new_scores[new_scores < 0] = 0
+            # Reset losing policies with a certain probability
+            if reset_prob > 0:
+                policy_scores = self.policies_performance.loc[self.step - 1, :].to_numpy()
+                to_reset = np.logical_and(policy_scores < -0.4, new_scores > 0, np.random.random(len(self.policies)) < reset_prob)
+                new_scores[to_reset] = 0
+            self.policy_scores_by_configuration[config_index] = new_scores
             # Save the score to the performance data frame
-            self.decays_performance.loc[self.step - 1, str(decay)] = score
+            self.configurations_performance.loc[self.step - 1, str(config)] = score
 
 
 AGENT = None
