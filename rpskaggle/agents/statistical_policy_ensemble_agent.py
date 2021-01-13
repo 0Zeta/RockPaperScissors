@@ -46,12 +46,12 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         self.policies_performance = pd.DataFrame(columns=["step"] + policy_names)
         self.policies_performance.set_index("step", inplace=True)
 
-        # The last scores for each decay value
+        # The last scores for each configuration
         self.policy_scores_by_configuration = np.zeros(
             (len(self.configurations), len(self.policies)), dtype=np.float64
         )
 
-        # Also record the performance of the different decay values
+        # Also record the performance of the different configurations
         self.last_probabilities_by_configuration = {
             decay: EQUAL_PROBS for decay in self.configurations
         }
@@ -77,13 +77,17 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             # Determine the performance scores of the policies for each configuration and calculate their respective weights using softmax
             config_probs = []
             for config_index, conf in enumerate(self.configurations):
+                decay, reset_prob, clip_zero = conf
                 policy_scores = self.policy_scores_by_configuration[config_index, :]
-                policy_scores = policy_scores / min(
-                    max(np.median(np.abs(policy_scores)), 1), 5
-                )
-                policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(
-                    np.exp(policy_scores - np.max(policy_scores))
-                )
+                if clip_zero:
+                    policy_weights = policy_scores / np.sum(policy_scores)
+                else:
+                    policy_scores = policy_scores / min(
+                        max(np.median(np.abs(policy_scores)), 1), 5
+                    )
+                    policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(
+                        np.exp(policy_scores - np.max(policy_scores))
+                    )
                 # Calculate the resulting probabilities for the possible actions
                 p = np.sum(
                     policy_weights.reshape((policy_weights.size, 1)) * policy_probs,
