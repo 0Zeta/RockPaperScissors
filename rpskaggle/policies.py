@@ -117,7 +117,7 @@ class SequencePolicy(Policy):
         return one_hot(self.sequence[step] % 3)
 
 
-class RPSContestPolicy(Policy):
+class DeterministicRPSContestPolicy(Policy):
     """
     a wrapper to run RPS Contest bots
     Adapted from https://www.kaggle.com/purplepuppy/running-rpscontest-bots
@@ -125,7 +125,7 @@ class RPSContestPolicy(Policy):
 
     def __init__(self, code, agent_name):
         super().__init__()
-        self.name = agent_name + "_policy"
+        self.name = "deterministic_" + agent_name + "_policy"
         self.is_deterministic = True
         self.code = compile(code, "<string>", "exec")
         self.gg = dict()
@@ -145,6 +145,39 @@ class RPSContestPolicy(Policy):
             self.gg["output"] = out
             exec(self.code, self.gg)
             return one_hot(self.symbols[self.gg["output"]])
+        except Exception as exception:
+            logging.error("An error ocurred in " + self.name + " : " + str(exception))
+            return EQUAL_PROBS
+
+
+class ProbabilisticRPSContestPolicy(Policy):
+    """
+    a wrapper to run modified probabilistic RPS Contest bots
+    Adapted from https://www.kaggle.com/purplepuppy/running-rpscontest-bots
+    """
+
+    def __init__(self, code, agent_name):
+        super().__init__()
+        self.name = "probabilistic_" + agent_name + "_policy"
+        self.is_deterministic = True
+        self.code = compile(code, "<string>", "exec")
+        self.gg = dict()
+        self.symbols = {"R": 0, "P": 1, "S": 2}
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        try:
+            inp = (
+                ""
+                if len(history) < 1
+                else "RPS"[int(history.loc[step - 1, "opponent_action"])]
+            )
+            out = (
+                "" if len(history) < 1 else "RPS"[int(history.loc[step - 1, "action"])]
+            )
+            self.gg["input"] = inp
+            self.gg["output"] = out
+            exec(self.code, self.gg)
+            return np.array(self.gg["output"])
         except Exception as exception:
             logging.error("An error ocurred in " + self.name + " : " + str(exception))
             return EQUAL_PROBS
@@ -469,7 +502,7 @@ def get_policies():
         advanced_policies.append(SequencePolicy(seq, seq_name))
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():
-        advanced_policies.append(RPSContestPolicy(code, agent_name))
+        advanced_policies.append(DeterministicRPSContestPolicy(code, agent_name))
     # Strict versions of the advanced policies
     strict_policies = [
         StrictPolicy(policy)
@@ -490,7 +523,7 @@ def get_policies():
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():
         counter_policies.append(
-            CounterPolicy(RPSContestPolicy(code, agent_name))
+            CounterPolicy(DeterministicRPSContestPolicy(code, agent_name))
         )
     strict_counter_policies = [
         StrictPolicy(policy)

@@ -19,14 +19,14 @@ class MultiArmedBandit(RPSAgent):
         # Use one fixed decay value  TODO: use multiple different decays, points per win/loss and reset probabilities
         self.decays = [0.97]
         self.scores_by_decay = np.full(
-            (len(self.decays), len(self.policies), 2), fill_value=0.1, dtype=np.float
+            (len(self.decays), len(self.policies), 2), fill_value=2, dtype=np.float
         )
         # Award 3 points per win, -3 per loss and 0 for draws
         self.win = 3.0
         self.tie = 0.0
         self.loss = 3.0
         # Probability of a reset after a policy loses once
-        self.reset_prob = 0.15
+        self.reset_prob = 0.1
         # Record the performance of all policies
         self.policies_performance = pd.DataFrame(
             columns=["step"]
@@ -119,7 +119,14 @@ class MultiArmedBandit(RPSAgent):
             ] = probs[losing_action] * self.loss - (
                 probs[opponent_action] * self.tie if self.tie < 0 else 0
             )
-
+            # Reset after a loss
+            if probs[losing_action] > 0.4:
+                if np.random.random() < self.reset_prob:
+                    self.scores_by_decay[
+                        self.scores_by_decay[:, policy_index, 0]
+                        > self.scores_by_decay[:, policy_index, 1],
+                        policy_index,
+                    ] = 2
 
         # Apply the different decay values
         for decay_index, decay in enumerate(self.decays):
