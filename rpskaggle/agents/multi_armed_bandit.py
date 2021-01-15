@@ -69,8 +69,9 @@ class MultiArmedBandit(RPSAgent):
                     self.scores_by_decay[decay_index, :, 0],
                     self.scores_by_decay[decay_index, :, 1],
                 )
-                # Select the probabilities of the policy with the highest value
-                probs = policy_probs[np.argmax(values)]
+                # Combine the probabilities of the policies with the three highest values
+                highest = (-values).argsort()[:3]
+                probs = 0.6 * policy_probs[highest[0]] + 0.25 * policy_probs[highest[1]] + 0.15 * policy_probs[highest[2]]
                 decay_probs.append(probs)
 
             # TODO: implement multiple decay values
