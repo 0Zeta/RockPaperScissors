@@ -1,5 +1,3 @@
-import logging
-import math
 from random import randint
 from rpskaggle.policies import *
 

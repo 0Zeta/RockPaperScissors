@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import List
 from sklearn.ensemble import RandomForestClassifier
 
+from rpskaggle.agents.geometry_agent import GeometryPolicy
 from rpskaggle.helpers import *
 
 
@@ -71,7 +72,9 @@ class StrictPolicy(Policy):
         self.is_deterministic = True
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
-        probs = self.policy._get_probs(step, score, history).copy()
+        if len(self.policy.history) == 0:
+            return EQUAL_PROBS
+        probs = self.policy.history[-1]
         action = np.argmax(probs)
         probs[:] = 0
         probs[action] = 1
@@ -496,6 +499,8 @@ def get_policies():
         RandomForestPolicy(20, 20, 5),
         MaxHistoryPolicy(15),
         MaxOpponentHistoryPolicy(15),
+        GeometryPolicy(),
+        GeometryPolicy(0.05)
     ]
     # Add some popular sequences
     for seq_name, seq in SEQUENCES.items():
@@ -519,6 +524,7 @@ def get_policies():
         CounterPolicy(MaxOpponentHistoryPolicy(15)),
         CounterPolicy(WinTieLosePolicy(0, 1, 1)),
         CounterPolicy(WinTieLosePolicy(0, 2, 2)),
+        CounterPolicy(GeometryPolicy())
     ]
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():
@@ -545,6 +551,7 @@ def get_policies():
     ]
     policies = (
             random_policies
+            + basic_policies
             + advanced_policies
             + strict_policies
             + incremented_policies
