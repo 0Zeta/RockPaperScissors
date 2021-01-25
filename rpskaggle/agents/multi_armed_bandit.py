@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO)
 
 class MultiArmedBandit(RPSAgent):
     """
-    a simple multi armed bandit approach sampling from a beta distribution
+    a simple multi armed bandit approach sampling from a dirichlet distribution
     """
 
     def __init__(self, configuration):
@@ -19,11 +19,11 @@ class MultiArmedBandit(RPSAgent):
         # Use one fixed decay value  TODO: use multiple different decays, points per win/loss and reset probabilities
         self.decays = [0.97]
         self.scores_by_decay = np.full(
-            (len(self.decays), len(self.policies), 2), fill_value=2, dtype=np.float
+            (len(self.decays), len(self.policies), 3), fill_value=2, dtype=np.float
         )
         # Award 3 points per win, -3 per loss and 0 for draws
         self.win = 3.0
-        self.tie = 0.0
+        self.tie = 3.0
         self.loss = 3.0
         # Probability of a reset after a policy loses once
         self.reset_prob = 0.1
@@ -39,9 +39,9 @@ class MultiArmedBandit(RPSAgent):
                 for _ in p
             ]
         )
-        self.win_loss_columns = [
+        self.win_tie_loss_columns = [
             _
-            for p in [[p_name + "_wins", p_name + "_losses"] for p_name in policy_names]
+            for p in [[p_name + "_wins", p_name + "_ties", p_name + "_losses"] for p_name in policy_names]
             for _ in p
         ]
         self.policies_performance.set_index("step", inplace=True)
@@ -65,10 +65,15 @@ class MultiArmedBandit(RPSAgent):
             decay_probs = []
             for decay_index, decay in enumerate(self.decays):
                 # Sample a value from the according beta distribution for every policy
-                values = np.random.beta(
-                    self.scores_by_decay[decay_index, :, 0],
-                    self.scores_by_decay[decay_index, :, 1],
-                )
+                values = np.ndarray(shape=(self.scores_by_decay.shape[1],), dtype=np.float)
+                for i in range(self.scores_by_decay.shape[1]):
+                    dirichlet = np.random.dirichlet(
+                        [self.scores_by_decay[decay_index, i, 0],
+                         self.scores_by_decay[decay_index, i, 1],
+                         self.scores_by_decay[decay_index, i, 2]]
+                    )
+                    values[i] = dirichlet[0] - dirichlet[2]
+
                 # Combine the probabilities of the policies with the three highest values
                 highest = (-values).argsort()[:3]
                 probs = 0.6 * policy_probs[highest[0]] + 0.25 * policy_probs[highest[1]] + 0.15 * policy_probs[highest[2]]
@@ -114,18 +119,19 @@ class MultiArmedBandit(RPSAgent):
             probs = policy.history[-1]
             self.policies_performance.loc[self.step - 1, policy_name + "_wins"] = probs[
                 winning_action
-            ] * self.win + (probs[opponent_action] * self.tie if self.tie > 0 else 0)
+            ] * self.win
             self.policies_performance.loc[
                 self.step - 1, policy_name + "_losses"
-            ] = probs[losing_action] * self.loss - (
-                probs[opponent_action] * self.tie if self.tie < 0 else 0
-            )
+            ] = probs[losing_action] * self.loss
+            self.policies_performance.loc[
+                self.step - 1, policy_name + "_ties"
+            ] = probs[opponent_action] * self.tie
             # Reset after a loss
             if probs[losing_action] > 0.4:
                 if np.random.random() < self.reset_prob:
                     self.scores_by_decay[
                         self.scores_by_decay[:, policy_index, 0]
-                        > self.scores_by_decay[:, policy_index, 1],
+                        > self.scores_by_decay[:, policy_index, 2],
                         policy_index,
                     ] = 2
 
@@ -135,9 +141,9 @@ class MultiArmedBandit(RPSAgent):
             self.scores_by_decay[decay_index] *= decay
             # Add the new scores
             self.scores_by_decay[decay_index, :, :] += (
-                self.policies_performance.loc[self.step - 1, self.win_loss_columns]
+                self.policies_performance.loc[self.step - 1, self.win_tie_loss_columns]
                 .to_numpy()
-                .reshape(len(self.policies), 2)
+                .reshape(len(self.policies), 3)
                 .astype(np.float)
             )
 
