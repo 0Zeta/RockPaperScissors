@@ -39,6 +39,8 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             (1.0, 0.0, False),
         ]
 
+        self.configuration_performance_decay = 0.96
+
         # Create a data frame with the historical performance of the policies
         policy_names = [policy.name for policy in self.policies]
         self.policies_performance = pd.DataFrame(columns=["step"] + policy_names)
@@ -99,12 +101,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 logging.debug("Configuration " + str(conf) + " probabilities: " + str(p))
 
             # Determine the performance scores for the different configurations and calculate their respective weights
-            # Use the last 50 steps
-            configuration_scores = self.configurations_performance.sum(axis=0)
-            configuration_scores = configuration_scores.to_numpy() / 5
-            configuration_weights = np.exp(configuration_scores - np.max(configuration_scores)) / sum(
-                np.exp(configuration_scores - np.max(configuration_scores))
-            )
+            # Apply a decay to the historical scores
+            configuration_scores = (self.configurations_performance * np.flip(np.power(self.configuration_performance_decay, np.arange(len(self.configurations_performance)))).reshape((-1, 1))).sum(axis=0)
+            configuration_weights = np.random.dirichlet(configuration_scores - np.min(configuration_scores) + 0.01)
             # logging.info(configuration_weights)
             # Calculate the resulting probabilities for the possible actions
             probabilities = np.sum(
