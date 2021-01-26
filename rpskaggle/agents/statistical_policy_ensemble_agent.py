@@ -85,9 +85,9 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                     policy_scores = policy_scores / min(
                         max(np.median(np.abs(policy_scores)), 1), 5
                     )
-                    policy_weights = np.exp(policy_scores - np.max(policy_scores)) / sum(
-                        np.exp(policy_scores - np.max(policy_scores))
-                    )
+                    policy_weights = np.exp(
+                        policy_scores - np.max(policy_scores)
+                    ) / sum(np.exp(policy_scores - np.max(policy_scores)))
                 # Calculate the resulting probabilities for the possible actions
                 p = np.sum(
                     policy_weights.reshape((policy_weights.size, 1)) * policy_probs,
@@ -98,16 +98,29 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 config_probs.append(p)
                 # Save the probabilities to evaluate the performance of this decay value in the next step
                 self.last_probabilities_by_configuration[conf] = p
-                logging.debug("Configuration " + str(conf) + " probabilities: " + str(p))
+                logging.debug(
+                    "Configuration " + str(conf) + " probabilities: " + str(p)
+                )
 
             # Determine the performance scores for the different configurations and calculate their respective weights
             # Apply a decay to the historical scores
-            configuration_scores = (self.configurations_performance * np.flip(np.power(self.configuration_performance_decay, np.arange(len(self.configurations_performance)))).reshape((-1, 1))).sum(axis=0)
-            configuration_weights = np.random.dirichlet(configuration_scores - np.min(configuration_scores) + 0.01)
+            configuration_scores = (
+                self.configurations_performance
+                * np.flip(
+                    np.power(
+                        self.configuration_performance_decay,
+                        np.arange(len(self.configurations_performance)),
+                    )
+                ).reshape((-1, 1))
+            ).sum(axis=0)
+            configuration_weights = np.random.dirichlet(
+                configuration_scores - np.min(configuration_scores) + 0.01
+            )
             # logging.info(configuration_weights)
             # Calculate the resulting probabilities for the possible actions
             probabilities = np.sum(
-                configuration_weights.reshape((configuration_weights.size, 1)) * config_probs,
+                configuration_weights.reshape((configuration_weights.size, 1))
+                * config_probs,
                 axis=0,
             )
             logging.info(
@@ -159,14 +172,23 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             probs = self.last_probabilities_by_configuration[config]
             score = np.sum(probs * scores)
             # Apply the decay to the current score and add the new scores
-            new_scores = self.policy_scores_by_configuration[config_index] * decay + self.policies_performance.loc[self.step - 1, :].to_numpy()
+            new_scores = (
+                self.policy_scores_by_configuration[config_index] * decay
+                + self.policies_performance.loc[self.step - 1, :].to_numpy()
+            )
             # Zero clip
             if clip_zero:
                 new_scores[new_scores < 0] = 0
             # Reset losing policies with a certain probability
             if reset_prob > 0:
-                policy_scores = self.policies_performance.loc[self.step - 1, :].to_numpy()
-                to_reset = np.logical_and(policy_scores < -0.4, new_scores > 0, np.random.random(len(self.policies)) < reset_prob)
+                policy_scores = self.policies_performance.loc[
+                    self.step - 1, :
+                ].to_numpy()
+                to_reset = np.logical_and(
+                    policy_scores < -0.4,
+                    new_scores > 0,
+                    np.random.random(len(self.policies)) < reset_prob,
+                )
                 new_scores[to_reset] = 0
             self.policy_scores_by_configuration[config_index] = new_scores
             # Save the score to the performance data frame

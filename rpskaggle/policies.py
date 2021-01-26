@@ -4,6 +4,8 @@ from typing import List
 from sklearn.ensemble import RandomForestClassifier
 
 from rpskaggle.agents.geometry_agent import GeometryPolicy
+from rpskaggle.agents.greenberg_policy import GreenbergPolicy
+from rpskaggle.agents.iocaine_powder_policy import IocainePolicy
 from rpskaggle.helpers import *
 
 
@@ -500,7 +502,8 @@ def get_policies():
         MaxHistoryPolicy(15),
         MaxOpponentHistoryPolicy(15),
         GeometryPolicy(),
-        GeometryPolicy(0.05)
+        GeometryPolicy(0.05),
+        GreenbergPolicy(),
     ]
     # Add some popular sequences
     for seq_name, seq in SEQUENCES.items():
@@ -524,7 +527,9 @@ def get_policies():
         CounterPolicy(MaxOpponentHistoryPolicy(15)),
         CounterPolicy(WinTieLosePolicy(0, 1, 1)),
         CounterPolicy(WinTieLosePolicy(0, 2, 2)),
-        CounterPolicy(GeometryPolicy())
+        CounterPolicy(GeometryPolicy()),
+        CounterPolicy(IocainePolicy()),
+        CounterPolicy(GreenbergPolicy()),
     ]
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():
@@ -540,23 +545,23 @@ def get_policies():
     incremented_policies = [
         IncrementPolicy(policy)
         for policy in (
-                advanced_policies
-                + strict_policies
-                + counter_policies
-                + strict_counter_policies
+            advanced_policies
+            + strict_policies
+            + counter_policies
+            + strict_counter_policies
         )
     ]
     double_incremented_policies = [
         IncrementPolicy(policy) for policy in incremented_policies
     ]
     policies = (
-            random_policies
-            + basic_policies
-            + advanced_policies
-            + strict_policies
-            + incremented_policies
-            + double_incremented_policies
-            + counter_policies
-            + strict_counter_policies
+        random_policies
+        + basic_policies
+        + advanced_policies
+        + strict_policies
+        + incremented_policies
+        + double_incremented_policies
+        + counter_policies
+        + strict_counter_policies
     )
     return policies

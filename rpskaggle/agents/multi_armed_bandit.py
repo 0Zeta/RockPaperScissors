@@ -41,7 +41,10 @@ class MultiArmedBandit(RPSAgent):
         )
         self.win_tie_loss_columns = [
             _
-            for p in [[p_name + "_wins", p_name + "_ties", p_name + "_losses"] for p_name in policy_names]
+            for p in [
+                [p_name + "_wins", p_name + "_ties", p_name + "_losses"]
+                for p_name in policy_names
+            ]
             for _ in p
         ]
         self.policies_performance.set_index("step", inplace=True)
@@ -65,18 +68,26 @@ class MultiArmedBandit(RPSAgent):
             decay_probs = []
             for decay_index, decay in enumerate(self.decays):
                 # Sample a value from the according beta distribution for every policy
-                values = np.ndarray(shape=(self.scores_by_decay.shape[1],), dtype=np.float)
+                values = np.ndarray(
+                    shape=(self.scores_by_decay.shape[1],), dtype=np.float
+                )
                 for i in range(self.scores_by_decay.shape[1]):
                     dirichlet = np.random.dirichlet(
-                        [self.scores_by_decay[decay_index, i, 0],
-                         self.scores_by_decay[decay_index, i, 1],
-                         self.scores_by_decay[decay_index, i, 2]]
+                        [
+                            self.scores_by_decay[decay_index, i, 0],
+                            self.scores_by_decay[decay_index, i, 1],
+                            self.scores_by_decay[decay_index, i, 2],
+                        ]
                     )
                     values[i] = dirichlet[0] - dirichlet[2]
 
                 # Combine the probabilities of the policies with the three highest values
                 highest = (-values).argsort()[:3]
-                probs = 0.6 * policy_probs[highest[0]] + 0.25 * policy_probs[highest[1]] + 0.15 * policy_probs[highest[2]]
+                probs = (
+                    0.6 * policy_probs[highest[0]]
+                    + 0.25 * policy_probs[highest[1]]
+                    + 0.15 * policy_probs[highest[2]]
+                )
                 decay_probs.append(probs)
 
             # TODO: implement multiple decay values
@@ -117,15 +128,15 @@ class MultiArmedBandit(RPSAgent):
         ):
             # Update the policy scores
             probs = policy.history[-1]
-            self.policies_performance.loc[self.step - 1, policy_name + "_wins"] = probs[
-                winning_action
-            ] * self.win
-            self.policies_performance.loc[
-                self.step - 1, policy_name + "_losses"
-            ] = probs[losing_action] * self.loss
-            self.policies_performance.loc[
-                self.step - 1, policy_name + "_ties"
-            ] = probs[opponent_action] * self.tie
+            self.policies_performance.loc[self.step - 1, policy_name + "_wins"] = (
+                probs[winning_action] * self.win
+            )
+            self.policies_performance.loc[self.step - 1, policy_name + "_losses"] = (
+                probs[losing_action] * self.loss
+            )
+            self.policies_performance.loc[self.step - 1, policy_name + "_ties"] = (
+                probs[opponent_action] * self.tie
+            )
             # Reset after a loss
             if probs[losing_action] > 0.4:
                 if np.random.random() < self.reset_prob:
