@@ -56,7 +56,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             decay: EQUAL_PROBS for decay in self.configurations
         }
         self.configurations_performance = pd.DataFrame(
-            columns=["step"] + [str(size) for size in self.configurations]
+            columns=["step"] + [str(config) for config in self.configurations]
         )
         self.configurations_performance.set_index("step", inplace=True)
 

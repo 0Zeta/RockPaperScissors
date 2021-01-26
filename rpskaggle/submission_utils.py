@@ -7,6 +7,8 @@ def generate_submissions():
         "helpers.py",
         "policies.py",
         "agents/geometry_agent.py",
+        "agents/iocaine_powder_policy.py",
+        "agents/greenberg_policy.py"
     ]
     agents = {
         "statistical_policy_ensemble": "agents/statistical_policy_ensemble_agent.py",
@@ -24,7 +26,7 @@ def generate_submissions():
                 for line in lines:
                     if copy_imports and "import" in line:
                         if "rpskaggle" not in line:
-                            imports.add(line)
+                            imports.add(line.strip())
                     else:
                         other_lines.append(line)
         with open(agent + "_submission.py", "w") as file:

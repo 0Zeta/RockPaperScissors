@@ -16,11 +16,25 @@ class MultiArmedBandit(RPSAgent):
         self.name_to_policy = {policy.name: policy for policy in self.policies}
         policy_names = [policy.name for policy in self.policies]
 
-        # Use one fixed decay value  TODO: use multiple different decays, points per win/loss and reset probabilities
-        self.decays = [0.97]
+        self.decays = [0.75, 0.8, 0.85, 0.9, 0.93, 0.97, 0.99]
         self.scores_by_decay = np.full(
             (len(self.decays), len(self.policies), 3), fill_value=2, dtype=np.float
         )
+        # Record the performance of the different decay values
+        self.decay_performance = pd.DataFrame(
+            columns=["step"]
+            + [
+                _
+                for d in [
+                    [str(decay) + "_wins", str(decay) + "_ties", str(decay) + "_losses"]
+                    for decay in self.decays
+                ]
+                for _ in d
+            ]
+        )
+        self.decay_performance.set_index("step", inplace=True)
+        self.decay_probs = list()
+        self.decay_performance_decay = 0.95
         # Award 3 points per win, -3 per loss and 0 for draws
         self.win = 3.0
         self.tie = 3.0
@@ -63,11 +77,11 @@ class MultiArmedBandit(RPSAgent):
         )
 
         if len(self.history) > 0:
-            # Determine the performance scores of the policies for each decay value, sample from the according beta
+            # Determine the performance scores of the policies for each decay value, sample from the according dirichlet
             # distribution and choose the policy with the highest score for each decay
             decay_probs = []
             for decay_index, decay in enumerate(self.decays):
-                # Sample a value from the according beta distribution for every policy
+                # Sample a value from the according dirichlet distribution for every policy
                 values = np.ndarray(
                     shape=(self.scores_by_decay.shape[1],), dtype=np.float
                 )
@@ -90,14 +104,50 @@ class MultiArmedBandit(RPSAgent):
                 )
                 decay_probs.append(probs)
 
-            # TODO: implement multiple decay values
-            probabilities = decay_probs[0]
+            self.decay_probs.append(decay_probs)
+            chosen_decay = self.decays[0]
+            if len(self.decay_performance) == 0:
+                probabilities = decay_probs[0]
+            else:
+                # Choose the decay with the highest value sampled from a dirichlet distribution
+                values = np.ndarray(shape=(len(self.decays),), dtype=np.float)
+                decayed_decay_performance = (
+                    (
+                        self.decay_performance
+                        * np.flip(
+                            np.power(
+                                self.decay_performance_decay,
+                                np.arange(len(self.decay_performance)),
+                            )
+                        ).reshape((-1, 1))
+                    )
+                    .sum(axis=0)
+                    .to_numpy()
+                    .reshape((-1, 3))
+                )
+                decayed_decay_performance = (
+                    decayed_decay_performance - np.min(decayed_decay_performance) + 0.01
+                )
+                for decay_index, _ in enumerate(self.decays):
+                    dirichlet = np.random.dirichlet(
+                        [
+                            3 * decayed_decay_performance[decay_index, 0],
+                            3 * decayed_decay_performance[decay_index, 1],
+                            3 * decayed_decay_performance[decay_index, 2],
+                        ]
+                    )
+                    values[decay_index] = dirichlet[0] - dirichlet[2]
+                chosen_decay_index = int(np.argmax(values))
+                probabilities = decay_probs[chosen_decay_index]
+                chosen_decay = self.decays[chosen_decay_index]
 
             logging.info(
                 "Multi Armed Bandit | Step "
                 + str(self.step)
                 + " | score: "
                 + str(self.score)
+                + " decay: "
+                + str(chosen_decay)
                 + " probabilities: "
                 + str(probabilities)
             )
@@ -145,6 +195,20 @@ class MultiArmedBandit(RPSAgent):
                         > self.scores_by_decay[:, policy_index, 2],
                         policy_index,
                     ] = 2
+
+        # Decays
+        if len(self.decay_probs) > 0:
+            for decay_index, decay in enumerate(self.decays):
+                probs = self.decay_probs[-1][decay_index]
+                self.decay_performance.loc[self.step - 1, str(decay) + "_wins"] = probs[
+                    winning_action
+                ]
+                self.decay_performance.loc[
+                    self.step - 1, str(decay) + "_losses"
+                ] = probs[losing_action]
+                self.decay_performance.loc[self.step - 1, str(decay) + "_ties"] = probs[
+                    opponent_action
+                ]
 
         # Apply the different decay values
         for decay_index, decay in enumerate(self.decays):
