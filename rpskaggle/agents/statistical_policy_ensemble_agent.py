@@ -116,13 +116,20 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             configuration_weights = np.random.dirichlet(
                 configuration_scores - np.min(configuration_scores) + 0.01
             )
-            # logging.info(configuration_weights)
-            # Calculate the resulting probabilities for the possible actions
-            probabilities = np.sum(
-                configuration_weights.reshape((configuration_weights.size, 1))
-                * config_probs,
-                axis=0,
-            )
+            for decay_index, probs in enumerate(config_probs):
+                if np.min(probs) > 0.2:
+                    # Don't take predictions with a high amount of uncertainty into account
+                    configuration_weights[decay_index] = 0
+            if np.sum(configuration_weights) > 0.2:
+                configuration_weights *= 1 / np.sum(configuration_weights)
+                # Calculate the resulting probabilities for the possible actions
+                probabilities = np.sum(
+                    configuration_weights.reshape((configuration_weights.size, 1))
+                    * config_probs,
+                    axis=0,
+                )
+            else:
+                probabilities = EQUAL_PROBS
             logging.info(
                 "Statistical Policy Ensemble | Step "
                 + str(self.step)
