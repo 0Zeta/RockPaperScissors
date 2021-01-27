@@ -26,7 +26,7 @@ def generate_submissions():
                 for line in lines:
                     if copy_imports and "import" in line:
                         if "rpskaggle" not in line:
-                            imports.add(line.strip())
+                            imports.add(line.strip() + "\n")
                     else:
                         other_lines.append(line)
         with open(agent + "_submission.py", "w") as file:

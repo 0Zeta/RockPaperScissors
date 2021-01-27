@@ -39,7 +39,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             (1.0, 0.0, False),
         ]
 
-        self.configuration_performance_decay = 0.96
+        self.configuration_performance_decay = 0.98
 
         # Create a data frame with the historical performance of the policies
         policy_names = [policy.name for policy in self.policies]
@@ -143,11 +143,6 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             action = int(np.argmax(probabilities))
         else:
             action = int(np.random.choice(range(SIGNS), p=probabilities))
-        if get_score(self.history, 15) < -5:
-            # If we got outplayed in the last 15 steps, play the counter of the chosen action´s counter with a
-            # certain probability
-            if randint(0, 100) <= 40:
-                action = (action + 2) % SIGNS
         return action
 
     def update_performance(self):

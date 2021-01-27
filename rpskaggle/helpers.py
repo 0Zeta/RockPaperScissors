@@ -1,5 +1,6 @@
+import math
 from typing import Tuple
-
+from secrets import SystemRandom
 import numpy as np
 import pandas as pd
 
@@ -35,6 +36,7 @@ class RPSAgent(object):
 
         self.step = 0
         self.score = 0
+        self.random = SystemRandom()
 
     def agent(
         self, observation, configuration=None, history=None
@@ -56,6 +58,25 @@ class RPSAgent(object):
 
         # Choose an action and append it to the history
         action = self.act()
+        # Calculate the probability of a win for random play
+        # Taken from https://www.kaggle.com/c/rock-paper-scissors/discussion/197402
+        win_prob = 0.5 + 0.5 * math.erf(((observation.reward - 20) + 1) / math.sqrt((2/3) * (1000 - observation.step)))
+        if win_prob >= 0.92 and get_score(self.history, 10) < 6 and self.random.randrange(0, 100) <= win_prob * 100:
+            # Try to secure the win with random play
+            action = self.random.randint(0, 2)
+            if self.random.randint(0, 10) <= 3:
+                action = (action + 2) % SIGNS
+        elif get_score(self.history, 15) < -4:
+            # If we got outplayed in the last 15 steps, play the counter of the chosen action´s counter with a
+            # certain probability
+            if self.random.randint(0, 100) <= 20:
+                action = (action + 2) % SIGNS
+            else:
+                # Play randomly
+                action = self.random.randint(0, 2)
+                if self.random.randint(0, 10) <= 3:
+                    action = (action + 1) % SIGNS
+
         self.history.loc[self.step] = {"action": action, "opponent_action": None}
         return action, self.history
 
