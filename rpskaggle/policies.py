@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from rpskaggle.agents.geometry_agent import GeometryPolicy
 from rpskaggle.agents.greenberg_policy import GreenbergPolicy
 from rpskaggle.agents.iocaine_powder_policy import IocainePolicy
+from rpskaggle.agents.seed_searcher import SeedSearchPolicy
 from rpskaggle.helpers import *
 
 
@@ -553,6 +554,7 @@ def get_policies():
         GeometryPolicy(),
         GeometryPolicy(0.05),
         GreenbergPolicy(),
+        SeedSearchPolicy(10000)
     ]
     # Add some popular sequences
     for seq_name, seq in SEQUENCES.items():

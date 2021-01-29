@@ -1,4 +1,5 @@
 import math
+import random
 from typing import Tuple
 from secrets import SystemRandom
 import numpy as np
@@ -41,6 +42,9 @@ class RPSAgent(object):
     def agent(
         self, observation, configuration=None, history=None
     ) -> Tuple[int, pd.DataFrame]:
+        if self.random.randint(0, 10) == 7:
+            # Change the random seed
+            self.random = SystemRandom()
         if configuration is not None:
             self.config = configuration
         if history is not None:
@@ -61,7 +65,7 @@ class RPSAgent(object):
         # Calculate the probability of a win for random play
         # Taken from https://www.kaggle.com/c/rock-paper-scissors/discussion/197402
         win_prob = 0.5 + 0.5 * math.erf(((observation.reward - 20) + 1) / math.sqrt((2/3) * (1000 - observation.step)))
-        if win_prob >= 0.92 and get_score(self.history, 10) < 6 and self.random.randrange(0, 100) <= win_prob * 100:
+        if win_prob >= 0.92 and get_score(self.history, 10) < 5 and self.random.randrange(0, 100) <= win_prob * 100:
             # Try to secure the win with random play
             action = self.random.randint(0, 2)
             if self.random.randint(0, 10) <= 3:

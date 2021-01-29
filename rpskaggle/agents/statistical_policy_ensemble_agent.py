@@ -97,7 +97,6 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 logging.debug(
                     "Configuration " + str(conf) + " probabilities: " + str(p)
                 )
-
             # Determine the performance scores for the different configurations and calculate their respective weights
             # Apply a decay to the historical scores
             configuration_scores = (
@@ -133,8 +132,8 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
 
         # Play randomly for the first 100-200 steps
         if self.step < 100 + randint(0, 100):
-            action = randint(0, 2)
-            if randint(0, 3) == 1:
+            action = self.random.randint(0, 2)
+            if self.random.randint(0, 3) == 1:
                 # We don´t want our random seed to be cracked.
                 action = (action + 1) % SIGNS
             return action
