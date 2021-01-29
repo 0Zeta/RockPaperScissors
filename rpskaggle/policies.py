@@ -440,6 +440,55 @@ class WinTieLosePolicy(Policy):
         return one_hot((int(history.loc[step - 1, "action"]) + shift) % 3)
 
 
+class FlattenPolicy(Policy):
+    """
+    core concept developed by Tony Robinson (https://www.kaggle.com/tonyrobinson)
+    Adapted from https://www.kaggle.com/tonyrobinson/flatten
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.name = "flatten_policy"
+        self.is_deterministic = False
+        self.countInc = 1e-30
+        self.countOp = self.countInc * np.ones((3, 3, 3))
+        self.countAg = self.countInc * np.ones((3, 3, 3))
+        self.reward = np.array([[0.0, -1.0, 1.0], [1.0, 0.0, -1.0], [-1.0, 1.0, 0.0]])
+        self.offset = 2.0
+        self.halfLife = 100.0
+        self.countPow = math.exp(math.log(2) / self.halfLife)
+        self.histAgent = []  # Agent history
+        self.histOpponent = []  # Opponent history
+        self.nwin = 0
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        if len(history) == 0:
+            return EQUAL_PROBS
+        opp_action = int(history.loc[step - 1, 'opponent_action'])
+        self.histOpponent.append(opp_action)
+        self.histAgent.append(int(history.loc[step - 1, 'action']))
+        # score last game
+        self.nwin += self.reward[self.histAgent[-1], opp_action]
+
+        if step > 1:
+            # increment predictors
+            self.countOp[self.histOpponent[-2], self.histAgent[-2], self.histOpponent[-1]] += self.countInc
+            self.countAg[self.histOpponent[-2], self.histAgent[-2], self.histAgent[-1]] += self.countInc
+        if len(self.histOpponent) < 2:
+            return EQUAL_PROBS
+        # stochastically flatten the distribution
+        count = self.countAg[self.histOpponent[-1], self.histAgent[-1]]
+        dist = (self.offset + 1) * count.max() - self.offset * count.min() - count
+        self.countInc *= self.countPow
+        if np.sum(np.abs(dist)) == 0:
+            return EQUAL_PROBS
+        else:
+            if np.min(dist) < 0:
+                dist -= np.min(dist)
+            dist *= 1 / np.sum(dist)
+            return dist
+
+
 class RockPolicy(Policy):
     """
     chooses Rock the whole time
@@ -529,7 +578,7 @@ def get_policies():
         CounterPolicy(WinTieLosePolicy(0, 2, 2)),
         CounterPolicy(GeometryPolicy()),
         CounterPolicy(IocainePolicy()),
-        CounterPolicy(GreenbergPolicy()),
+        CounterPolicy(GreenbergPolicy())
     ]
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():

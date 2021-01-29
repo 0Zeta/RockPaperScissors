@@ -1,7 +1,7 @@
 from random import randint
 from rpskaggle.policies import *
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 
 
 class StatisticalPolicyEnsembleAgent(RPSAgent):
@@ -25,6 +25,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         # The different combinations of decay values, reset probabilities and zero clips
         self.configurations = [
             (0.7, 0.0, False),
+            (0.8, 0.0, False),
             (0.8866, 0.01, False),
             (0.8866, 0.0, False),
             (0.93, 0.05, False),
@@ -74,25 +75,20 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         )
 
         if len(self.history) > 0:
-            # Determine the performance scores of the policies for each configuration and calculate their respective weights using softmax
+            # Determine the performance scores of the policies for each configuration and calculate their respective weights using a dirichlet distribution
             config_probs = []
             for config_index, conf in enumerate(self.configurations):
                 decay, reset_prob, clip_zero = conf
                 policy_scores = self.policy_scores_by_configuration[config_index, :]
-                if clip_zero:
-                    policy_weights = policy_scores / np.sum(policy_scores)
-                else:
-                    policy_scores = policy_scores / min(
-                        max(np.median(np.abs(policy_scores)), 1), 5
-                    )
-                    policy_weights = np.exp(
-                        policy_scores - np.max(policy_scores)
-                    ) / sum(np.exp(policy_scores - np.max(policy_scores)))
+                scale = 5 / (np.sum(np.power(decay, np.arange(0, 12))))
+                policy_weights = np.random.dirichlet(scale * (policy_scores - np.min(policy_scores)) + 0.1)
                 # Calculate the resulting probabilities for the possible actions
                 p = np.sum(
                     policy_weights.reshape((policy_weights.size, 1)) * policy_probs,
                     axis=0,
                 )
+                highest = (-policy_weights).argsort()[:3]
+                p = 0.7 * policy_probs[highest[0]] + 0.2 * policy_probs[highest[1]] + 0.1 * policy_probs[highest[2]]
                 if self.strict_agent:
                     p = one_hot(int(np.argmax(p)))
                 config_probs.append(p)
@@ -112,22 +108,18 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                         np.arange(len(self.configurations_performance)),
                     )
                 ).reshape((-1, 1))
-            ).sum(axis=0)
+            ).sum(axis=0) * 3
             configuration_weights = np.random.dirichlet(
                 configuration_scores - np.min(configuration_scores) + 0.01
             )
             for decay_index, probs in enumerate(config_probs):
-                if np.min(probs) > 0.2:
+                if np.min(probs) > 0.25:
                     # Don't take predictions with a high amount of uncertainty into account
                     configuration_weights[decay_index] = 0
             if np.sum(configuration_weights) > 0.2:
                 configuration_weights *= 1 / np.sum(configuration_weights)
-                # Calculate the resulting probabilities for the possible actions
-                probabilities = np.sum(
-                    configuration_weights.reshape((configuration_weights.size, 1))
-                    * config_probs,
-                    axis=0,
-                )
+                # Select the configuration with the highest value
+                probabilities = config_probs[np.argmax(configuration_weights)]
             else:
                 probabilities = EQUAL_PROBS
             logging.info(
