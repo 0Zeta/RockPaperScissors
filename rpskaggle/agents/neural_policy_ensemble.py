@@ -28,19 +28,36 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         self.policies_performance.set_index("step", inplace=True)
 
         # the amount of timesteps to use for predictions
-        self.look_back = 10
+        self.look_back = 20
 
-        # simple LSTM network
+        # simple neural network
         self.model = keras.Sequential()
         self.model.add(
-            keras.layers.LSTM(
-                128,
+            keras.layers.Conv1D(
+                64,
+                3,
                 input_shape=(self.look_back, len(self.policies)),
-                return_sequences=False,
-                activation="relu",
-                use_bias=True,
+                activation='relu',
+                use_bias=True
             )
         )
+        self.model.add(
+            keras.layers.Conv1D(
+                128,
+                3,
+                activation='relu',
+                use_bias=True
+            )
+        )
+        self.model.add(
+            keras.layers.Conv1D(
+                128,
+                2,
+                activation='relu',
+                use_bias=True
+            )
+        )
+        self.model.add(keras.layers.Flatten())
         self.model.add(
             keras.layers.Dense(len(self.policies), activation="sigmoid", use_bias=True)
         )
@@ -87,7 +104,7 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
             + str(probabilities)
         )
         # Play randomly for the first 100-200 steps self.step < 100 + randint(0, 100)
-        if False:
+        if self.step < 100 + randint(0, 100):
             action = self.random.randint(0, 2)
             if self.random.randint(0, 3) == 1:
                 # We don´t want our random seed to be cracked.
@@ -126,14 +143,20 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
             )
 
     def train_model(self):
+        X = np.asarray(self.X).astype(np.float32)
+        y = np.asarray(self.y).astype(np.float32)
+
+        if len(X) > 15 * self.batch_size:
+            # No need to train on old data when everyone plays randomly for the first steps
+            X = X[-15*self.batch_size:]
+            y = y[-15*self.batch_size:]
         self.model.fit(
-            np.asarray(self.X).astype(np.float32),
-            np.asarray(self.y).astype(np.float32),
+            X,
+            y,
             batch_size=self.batch_size,
             epochs=1,
             verbose=0,
             shuffle=True,
-            steps_per_epoch=min(len(self.X) // self.batch_size, 250 // self.batch_size),
         )
 
 
