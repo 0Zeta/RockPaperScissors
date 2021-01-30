@@ -64,6 +64,31 @@ class CounterPolicy(Policy):
         return np.roll(probs, 1)
 
 
+class PhasedCounterPolicy(Policy):
+    """
+    a policy countering the specified policy based on @superant´s finding regarding the phase shift
+    as a counter to stochastical agents
+    https://www.kaggle.com/superant/anti-opp-transition-matrix-beating-stochastic
+    """
+
+    def __init__(self, policy: Policy):
+        super().__init__()
+        self.policy = policy
+        self.name = "phased_counter_" + policy.name
+        self.is_deterministic = False
+
+    def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
+        probs = self.policy._get_probs(
+            step,
+            -score,
+            history.rename(
+                columns={"action": "opponent_action", "opponent_action": "action"}
+            ),
+        )
+        # Add 1 to the action with a probability of 40%
+        return 0.4 * np.roll(probs, 1) + 0.6 * probs
+
+
 class StrictPolicy(Policy):
     """
     always selects the action with the highest probability for a given policy
@@ -571,18 +596,18 @@ def get_policies():
     ]
     # Counter policies
     counter_policies = [
-        CounterPolicy(FrequencyPolicy()),
+        PhasedCounterPolicy(FrequencyPolicy()),
         CounterPolicy(CopyLastActionPolicy()),
-        CounterPolicy(TransitionMatrixPolicy()),
-        CounterPolicy(TransitionTensorPolicy()),
-        CounterPolicy(MaxHistoryPolicy(15)),
-        CounterPolicy(MaxOpponentHistoryPolicy(15)),
+        PhasedCounterPolicy(TransitionMatrixPolicy()),
+        PhasedCounterPolicy(TransitionTensorPolicy()),
+        PhasedCounterPolicy(MaxHistoryPolicy(15)),
+        PhasedCounterPolicy(MaxOpponentHistoryPolicy(15)),
         CounterPolicy(WinTieLosePolicy(0, 1, 1)),
         CounterPolicy(WinTieLosePolicy(0, 2, 2)),
         CounterPolicy(IocainePolicy()),
-        CounterPolicy(GreenbergPolicy()),
+        PhasedCounterPolicy(GreenbergPolicy()),
         AntiGeometryPolicy(),
-        CounterPolicy(AntiGeometryPolicy())
+        PhasedCounterPolicy(AntiGeometryPolicy())
     ]
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():
