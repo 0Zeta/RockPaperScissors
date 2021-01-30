@@ -27,14 +27,16 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         self.policies_performance = pd.DataFrame(columns=["step"] + policy_names)
         self.policies_performance.set_index("step", inplace=True)
 
+        self.decay = 0.98
+
         # the amount of timesteps to use for predictions
-        self.look_back = 20
+        self.look_back = 10
 
         # simple neural network
         self.model = keras.Sequential()
         self.model.add(
             keras.layers.Conv1D(
-                64,
+                128,
                 3,
                 input_shape=(self.look_back, len(self.policies)),
                 activation='relu',
@@ -43,12 +45,13 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         )
         self.model.add(
             keras.layers.Conv1D(
-                128,
+                256,
                 3,
                 activation='relu',
                 use_bias=True
             )
         )
+        self.model.add(keras.layers.MaxPool1D())
         self.model.add(
             keras.layers.Conv1D(
                 128,
@@ -63,7 +66,7 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         )
         self.model.compile(
             loss="mean_squared_error",
-            optimizer=keras.optimizers.Adam(learning_rate=0.005),
+            optimizer=keras.optimizers.Adam(learning_rate=0.003),
         )
 
         self.batch_size = 20
@@ -146,17 +149,22 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         X = np.asarray(self.X).astype(np.float32)
         y = np.asarray(self.y).astype(np.float32)
 
-        if len(X) > 15 * self.batch_size:
+        if len(X) > 25 * self.batch_size:
             # No need to train on old data when everyone plays randomly for the first steps
-            X = X[-15*self.batch_size:]
-            y = y[-15*self.batch_size:]
+            X = X[-25*self.batch_size:]
+            y = y[-25*self.batch_size:]
+
+        # Favor more recent samples
+        weights = np.flip(np.power(self.decay, np.arange(0, len(X))))
+
         self.model.fit(
             X,
             y,
             batch_size=self.batch_size,
-            epochs=1,
+            epochs=3,
             verbose=0,
             shuffle=True,
+            sample_weight=weights
         )
 
 
