@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import List
 from sklearn.ensemble import RandomForestClassifier
 
+from rpskaggle.agents.anti_geo import AntiGeometryPolicy
 from rpskaggle.agents.geometry_agent import GeometryPolicy
 from rpskaggle.agents.greenberg_policy import GreenbergPolicy
 from rpskaggle.agents.iocaine_powder_policy import IocainePolicy
@@ -578,9 +579,10 @@ def get_policies():
         CounterPolicy(MaxOpponentHistoryPolicy(15)),
         CounterPolicy(WinTieLosePolicy(0, 1, 1)),
         CounterPolicy(WinTieLosePolicy(0, 2, 2)),
-        CounterPolicy(GeometryPolicy()),
         CounterPolicy(IocainePolicy()),
-        CounterPolicy(GreenbergPolicy())
+        CounterPolicy(GreenbergPolicy()),
+        AntiGeometryPolicy(),
+        CounterPolicy(AntiGeometryPolicy())
     ]
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():
