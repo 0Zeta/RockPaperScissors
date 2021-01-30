@@ -77,7 +77,7 @@ class StrictPolicy(Policy):
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         if len(self.policy.history) == 0:
             return EQUAL_PROBS
-        probs = self.policy.history[-1]
+        probs = np.copy(self.policy.history[-1])
         action = np.argmax(probs)
         probs[:] = 0
         probs[action] = 1

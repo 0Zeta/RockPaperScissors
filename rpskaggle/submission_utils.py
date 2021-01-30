@@ -31,6 +31,7 @@ def generate_submissions():
                     else:
                         other_lines.append(line)
         with open(agent + "_submission.py", "w") as file:
+            file.writelines(["%%writefile " + agent + ".py\n"])
             file.writelines(imports)
             file.writelines(other_lines)
 
