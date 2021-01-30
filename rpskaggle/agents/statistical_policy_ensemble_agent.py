@@ -26,16 +26,12 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
         self.configurations = [
             (0.7, 0.0, False),
             (0.8, 0.0, False),
-            (0.8866, 0.01, False),
             (0.8866, 0.0, False),
             (0.93, 0.05, False),
             (0.93, 0.0, False),
             (0.9762, 0.05, True),
             (0.9880, 0.0, False),
-            (0.9880, 0.1, False),
-            (0.9966, 0.1, True),
             (0.99815, 0.1, False),
-            (0.9995, 0.1, True),
             (1.0, 0.1, True),
             (1.0, 0.0, False),
         ]

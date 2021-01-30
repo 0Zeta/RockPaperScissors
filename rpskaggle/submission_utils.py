@@ -14,6 +14,7 @@ def generate_submissions():
     agents = {
         "statistical_policy_ensemble": "agents/statistical_policy_ensemble_agent.py",
         "multi_armed_bandit": "agents/multi_armed_bandit.py",
+        "neural_policy_ensemble": "agents/neural_policy_ensemble.py"
     }
     exclude_imports = ["agents/rpscontest_bots.py"]
 
