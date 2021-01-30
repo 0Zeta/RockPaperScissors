@@ -60,6 +60,13 @@ class RPSAgent(object):
             ] = self.obs.lastOpponentAction
             self.score = get_score(self.history)
 
+        if self.score - 20 > (1000 - self.step):
+            # Don't waste computation time
+            action = self.random.randint(0, 2)
+            if self.random.randint(0, 10) <= 3:
+                action = (action + 1) % SIGNS
+            return action, history
+
         # Choose an action and append it to the history
         action = self.act()
         # Calculate the probability of a win for random play
