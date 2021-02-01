@@ -34,6 +34,12 @@ class RPSAgent(object):
         self.history = self.history.astype(
             {"action": np.int, "opponent_action": np.int}
         )
+        # How the game would have happened if we always chose the actions selected by our agent
+        self.alternate_history = pd.DataFrame(columns=["step", "action", "opponent_action"])
+        self.alternate_history.set_index("step", inplace=True)
+        self.history = self.history.astype(
+            {"action": np.int, "opponent_action": np.int}
+        )
 
         self.step = 0
         self.score = 0
@@ -58,6 +64,9 @@ class RPSAgent(object):
             self.history.loc[
                 self.step - 1, "opponent_action"
             ] = self.obs.lastOpponentAction
+            self.alternate_history.loc[
+                self.step - 1, "opponent_action"
+            ] = self.obs.lastOpponentAction
             self.score = get_score(self.history)
 
         if self.score - 20 > (1000 - self.step):
@@ -69,6 +78,7 @@ class RPSAgent(object):
 
         # Choose an action and append it to the history
         action = self.act()
+        self.alternate_history.loc[self.step] = {"action": action, "opponent_action": None}
         # Calculate the probability of a win for random play
         # Taken from https://www.kaggle.com/c/rock-paper-scissors/discussion/197402
         win_prob = 0.5 + 0.5 * math.erf(((observation.reward - 20) + 1) / math.sqrt((2/3) * (1000 - observation.step)))
@@ -77,7 +87,7 @@ class RPSAgent(object):
             action = self.random.randint(0, 2)
             if self.random.randint(0, 10) <= 3:
                 action = (action + 2) % SIGNS
-        elif get_score(self.history, 15) < -4:
+        elif get_score(self.alternate_history, 15) < -4:
             # If we got outplayed in the last 15 steps, play the counter of the chosen action´s counter with a
             # certain probability
             if self.random.randint(0, 100) <= 20:
