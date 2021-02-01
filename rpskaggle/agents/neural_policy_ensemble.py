@@ -27,16 +27,16 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         self.policies_performance = pd.DataFrame(columns=["step"] + policy_names)
         self.policies_performance.set_index("step", inplace=True)
 
-        self.decay = 0.9
+        self.decay = 0.93
 
         # the amount of timesteps to use for predictions
-        self.look_back = 5
+        self.look_back = 8
 
         # simple neural network
         self.model = keras.Sequential()
         self.model.add(
             keras.layers.LSTM(
-                96,
+                32,
                 input_shape=(self.look_back, len(self.policies)),
                 return_sequences=True,
                 use_bias=True,
@@ -44,7 +44,7 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         )
         self.model.add(
             keras.layers.LSTM(
-                32,
+                16,
                 input_shape=(self.look_back, len(self.policies)),
                 return_sequences=False,
                 use_bias=True,
@@ -55,7 +55,7 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         )
         self.model.compile(
             loss="mean_squared_error",
-            optimizer=keras.optimizers.Adam(learning_rate=0.004),
+            optimizer=keras.optimizers.Adam(learning_rate=0.005),
         )
 
         self.batch_size = 20
@@ -95,8 +95,8 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
             + " probabilities: "
             + str(probabilities)
         )
-        # Play randomly for the first 100-200 steps self.step < 100 + randint(0, 100)
-        if self.step < 100 + randint(0, 100):
+        # Play randomly for the first 130-230 steps
+        if self.step < 130 + randint(0, 100) and get_score(self.alternate_history, 15) < 6:
             action = self.random.randint(0, 2)
             if self.random.randint(0, 3) == 1:
                 # We don´t want our random seed to be cracked.

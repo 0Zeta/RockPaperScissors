@@ -24,18 +24,17 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
 
         # The different combinations of decay values, reset probabilities and zero clips
         self.configurations = [
-            (0.7, 0.0, False),
+            (0.5, 0.0, False),
             (0.8, 0.0, False),
             (0.8866, 0.0, False),
             (0.93, 0.0, False),
             (0.9762, 0.05, True),
             (0.9880, 0.0, False),
             (0.99815, 0.1, False),
-            (1.0, 0.1, True),
             (1.0, 0.0, False),
         ]
 
-        self.configuration_performance_decay = 0.98
+        self.configuration_performance_decay = 0.95
 
         # Create a data frame with the historical performance of the policies
         policy_names = [policy.name for policy in self.policies]
@@ -75,13 +74,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             for config_index, conf in enumerate(self.configurations):
                 decay, reset_prob, clip_zero = conf
                 policy_scores = self.policy_scores_by_configuration[config_index, :]
-                scale = 5 / (np.sum(np.power(decay, np.arange(0, 12))))
-                policy_weights = np.random.dirichlet(scale * (policy_scores - np.min(policy_scores)) + 0.1)
-                # Calculate the resulting probabilities for the possible actions
-                p = np.sum(
-                    policy_weights.reshape((policy_weights.size, 1)) * policy_probs,
-                    axis=0,
-                )
+                policy_weights = np.random.dirichlet(4 * (policy_scores - np.min(policy_scores)) + 0.1)
                 highest = (-policy_weights).argsort()[:3]
                 p = 0.7 * policy_probs[highest[0]] + 0.2 * policy_probs[highest[1]] + 0.1 * policy_probs[highest[2]]
                 if self.strict_agent:
@@ -107,7 +100,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
                 configuration_scores - np.min(configuration_scores) + 0.01
             )
             for decay_index, probs in enumerate(config_probs):
-                if np.min(probs) > 0.25:
+                if np.min(probs) > 0.28:
                     # Don't take predictions with a high amount of uncertainty into account
                     configuration_weights[decay_index] = 0
             if np.sum(configuration_weights) > 0.2:
@@ -126,7 +119,7 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             )
 
         # Play randomly for the first 100-200 steps
-        if self.step < 100 + randint(0, 100):
+        if self.step < 100 + randint(0, 100) and get_score(self.alternate_history, 15) < 6:
             action = self.random.randint(0, 2)
             if self.random.randint(0, 3) == 1:
                 # We don´t want our random seed to be cracked.
