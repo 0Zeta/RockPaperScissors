@@ -30,13 +30,13 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
         self.decay = 0.93
 
         # the amount of timesteps to use for predictions
-        self.look_back = 8
+        self.look_back = 6
 
         # simple neural network
         self.model = keras.Sequential()
         self.model.add(
             keras.layers.LSTM(
-                32,
+                64,
                 input_shape=(self.look_back, len(self.policies)),
                 return_sequences=True,
                 use_bias=True,
@@ -160,7 +160,7 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
 AGENT = None
 
 
-def statistical_policy_ensemble(observation, configuration) -> int:
+def neural_policy_ensemble(observation, configuration) -> int:
     global AGENT
     if AGENT is None:
         AGENT = NeuralPolicyEnsembleAgent(configuration)

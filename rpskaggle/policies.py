@@ -578,7 +578,6 @@ def get_policies():
         MaxHistoryPolicy(15),
         MaxOpponentHistoryPolicy(15),
         GeometryPolicy(),
-        GeometryPolicy(0.05),
         GreenbergPolicy(),
         SeedSearchPolicy(10000)
     ]
@@ -596,18 +595,16 @@ def get_policies():
     ]
     # Counter policies
     counter_policies = [
-        PhasedCounterPolicy(FrequencyPolicy()),
+        CounterPolicy(FrequencyPolicy()),
         CounterPolicy(CopyLastActionPolicy()),
-        PhasedCounterPolicy(TransitionMatrixPolicy()),
-        PhasedCounterPolicy(TransitionTensorPolicy()),
-        PhasedCounterPolicy(MaxHistoryPolicy(15)),
-        PhasedCounterPolicy(MaxOpponentHistoryPolicy(15)),
-        CounterPolicy(WinTieLosePolicy(0, 1, 1)),
-        CounterPolicy(WinTieLosePolicy(0, 2, 2)),
+        CounterPolicy(TransitionMatrixPolicy()),
+        CounterPolicy(TransitionTensorPolicy()),
+        CounterPolicy(MaxHistoryPolicy(15)),
+        CounterPolicy(MaxOpponentHistoryPolicy(15)),
         CounterPolicy(IocainePolicy()),
-        PhasedCounterPolicy(GreenbergPolicy()),
+        CounterPolicy(GreenbergPolicy()),
         AntiGeometryPolicy(),
-        PhasedCounterPolicy(AntiGeometryPolicy())
+        CounterPolicy(AntiGeometryPolicy())
     ]
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():

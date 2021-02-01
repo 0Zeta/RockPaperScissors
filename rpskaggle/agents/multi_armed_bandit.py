@@ -16,7 +16,7 @@ class MultiArmedBandit(RPSAgent):
         self.name_to_policy = {policy.name: policy for policy in self.policies}
         policy_names = [policy.name for policy in self.policies]
 
-        self.decays = [0.8, 0.93, 0.97, 0.99]
+        self.decays = [0.5, 0.93, 0.99]
         self.scores_by_decay = np.full(
             (len(self.decays), len(self.policies), 3), fill_value=2, dtype=np.float
         )
