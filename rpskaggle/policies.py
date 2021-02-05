@@ -491,16 +491,20 @@ class FlattenPolicy(Policy):
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
         if len(history) == 0:
             return EQUAL_PROBS
-        opp_action = int(history.loc[step - 1, 'opponent_action'])
+        opp_action = int(history.loc[step - 1, "opponent_action"])
         self.histOpponent.append(opp_action)
-        self.histAgent.append(int(history.loc[step - 1, 'action']))
+        self.histAgent.append(int(history.loc[step - 1, "action"]))
         # score last game
         self.nwin += self.reward[self.histAgent[-1], opp_action]
 
         if step > 1:
             # increment predictors
-            self.countOp[self.histOpponent[-2], self.histAgent[-2], self.histOpponent[-1]] += self.countInc
-            self.countAg[self.histOpponent[-2], self.histAgent[-2], self.histAgent[-1]] += self.countInc
+            self.countOp[
+                self.histOpponent[-2], self.histAgent[-2], self.histOpponent[-1]
+            ] += self.countInc
+            self.countAg[
+                self.histOpponent[-2], self.histAgent[-2], self.histAgent[-1]
+            ] += self.countInc
         if len(self.histOpponent) < 2:
             return EQUAL_PROBS
         # stochastically flatten the distribution
@@ -579,7 +583,7 @@ def get_policies():
         MaxOpponentHistoryPolicy(15),
         GeometryPolicy(),
         GreenbergPolicy(),
-        SeedSearchPolicy(10000)
+        SeedSearchPolicy(10000),
     ]
     # Add some popular sequences
     for seq_name, seq in SEQUENCES.items():
@@ -604,7 +608,7 @@ def get_policies():
         CounterPolicy(IocainePolicy()),
         CounterPolicy(GreenbergPolicy()),
         AntiGeometryPolicy(),
-        CounterPolicy(AntiGeometryPolicy())
+        CounterPolicy(AntiGeometryPolicy()),
     ]
     # Add some RPS Contest bots to the ensemble
     for agent_name, code in RPSCONTEST_BOTS.items():

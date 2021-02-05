@@ -15,8 +15,8 @@ STEPS_MIN = 3
 # lowest efficiency threshold of a memory pattern before being removed from agent's memory
 EFFICIENCY_THRESHOLD = -3
 
-class MemoryPatternsPolicy(Policy):
 
+class MemoryPatternsPolicy(Policy):
     def __init__(self):
         super().__init__()
         self.name = "memory_patterns_policy"
@@ -30,7 +30,7 @@ class MemoryPatternsPolicy(Policy):
             # action was taken from pattern
             "action_from_pattern": False,
             "pattern_group_index": None,
-            "pattern_index": None
+            "pattern_index": None,
         }
         # maximum length of current_memory
         self.current_memory_max_length = STEPS_MAX * 2
@@ -43,16 +43,18 @@ class MemoryPatternsPolicy(Policy):
         # list of groups of memory patterns
         self.groups_of_memory_patterns = []
         for i in range(STEPS_MAX, STEPS_MIN - 1, -1):
-            self.groups_of_memory_patterns.append({
-                # how many steps in a row are in the pattern
-                "memory_length": self.group_memory_length,
-                # list of memory patterns
-                "memory_patterns": []
-            })
+            self.groups_of_memory_patterns.append(
+                {
+                    # how many steps in a row are in the pattern
+                    "memory_length": self.group_memory_length,
+                    # list of memory patterns
+                    "memory_patterns": [],
+                }
+            )
             self.group_memory_length -= 2
 
     def _get_probs(self, step: int, score: int, history: pd.DataFrame) -> np.ndarray:
-        last_action = int(history.loc[step - 1, 'action']) if len(history) > 0 else -1
+        last_action = int(history.loc[step - 1, "action"]) if len(history) > 0 else -1
         # add my_agent's current step to current_memory
         if len(history) > 0:
             last_action = self.previous_action["action"]
@@ -69,9 +71,11 @@ class MemoryPatternsPolicy(Policy):
         # if it's not first step
         if len(history) > 0:
             # add opponent's last step to current_memory
-            self.current_memory.append(int(history.loc[step - 1, 'opponent_action']))
+            self.current_memory.append(int(history.loc[step - 1, "opponent_action"]))
             # previous step won or lost
-            previous_step_result = self.get_step_result_for_my_agent(last_action, int(history.loc[step - 1, 'opponent_action']))
+            previous_step_result = self.get_step_result_for_my_agent(
+                last_action, int(history.loc[step - 1, "opponent_action"])
+            )
             self.reward += previous_step_result
             # if previous action of my_agent was taken from pattern
             if self.previous_action["action_from_pattern"]:
@@ -82,7 +86,9 @@ class MemoryPatternsPolicy(Policy):
             self.update_memory_pattern(self.groups_of_memory_patterns[i], history, step)
             # if action was not yet found
             if my_action is None:
-                my_action, pattern_index = self.find_action(self.groups_of_memory_patterns[i], i)
+                my_action, pattern_index = self.find_action(
+                    self.groups_of_memory_patterns[i], i
+                )
                 if my_action is not None:
                     # save action's data
                     self.previous_action["action"] = my_action
@@ -103,31 +109,37 @@ class MemoryPatternsPolicy(Policy):
 
     def evaluate_pattern_efficiency(self, previous_step_result):
         """
-            evaluate efficiency of the pattern and, if pattern is inefficient,
-            remove it from agent's memory
+        evaluate efficiency of the pattern and, if pattern is inefficient,
+        remove it from agent's memory
         """
         pattern_group_index = self.previous_action["pattern_group_index"]
         pattern_index = self.previous_action["pattern_index"]
-        pattern = self.groups_of_memory_patterns[pattern_group_index]["memory_patterns"][pattern_index]
+        pattern = self.groups_of_memory_patterns[pattern_group_index][
+            "memory_patterns"
+        ][pattern_index]
         pattern["reward"] += previous_step_result
         # if pattern is inefficient
         if pattern["reward"] <= EFFICIENCY_THRESHOLD:
             # remove pattern from agent's memory
-            del self.groups_of_memory_patterns[pattern_group_index]["memory_patterns"][pattern_index]
+            del self.groups_of_memory_patterns[pattern_group_index]["memory_patterns"][
+                pattern_index
+            ]
 
     def find_action(self, group, group_index):
         """ if possible, find my_action in this group of memory patterns """
         if len(self.current_memory) > group["memory_length"]:
-            this_step_memory = self.current_memory[-group["memory_length"]:]
-            memory_pattern, pattern_index = self.find_pattern(group["memory_patterns"], this_step_memory,
-                                                         group["memory_length"])
+            this_step_memory = self.current_memory[-group["memory_length"] :]
+            memory_pattern, pattern_index = self.find_pattern(
+                group["memory_patterns"], this_step_memory, group["memory_length"]
+            )
             if memory_pattern is not None:
                 my_action_amount = 0
                 for action in memory_pattern["opp_next_actions"]:
                     # if this opponent's action occurred more times than currently chosen action
                     # or, if it occured the same amount of times and this one is choosen randomly among them
-                    if (action["amount"] > my_action_amount or
-                            (action["amount"] == my_action_amount and random.random() > 0.5)):
+                    if action["amount"] > my_action_amount or (
+                        action["amount"] == my_action_amount and random.random() > 0.5
+                    ):
                         my_action_amount = action["amount"]
                         my_action = action["response"]
                 return my_action, pattern_index
@@ -150,13 +162,15 @@ class MemoryPatternsPolicy(Policy):
 
     def get_step_result_for_my_agent(self, my_agent_action, opp_action):
         """
-            get result of the step for my_agent
-            1, 0 and -1 representing win, tie and lost results of the game respectively
-            reward will be taken from observation in the next release of kaggle environments
+        get result of the step for my_agent
+        1, 0 and -1 representing win, tie and lost results of the game respectively
+        reward will be taken from observation in the next release of kaggle environments
         """
         if my_agent_action == opp_action:
             return 0
-        elif (my_agent_action == (opp_action + 1)) or (my_agent_action == 0 and opp_action == 2):
+        elif (my_agent_action == (opp_action + 1)) or (
+            my_agent_action == 0 and opp_action == 2
+        ):
             return 1
         else:
             return -1
@@ -177,9 +191,10 @@ class MemoryPatternsPolicy(Policy):
         if len(self.current_memory) > group["memory_length"]:
             # get memory of the previous step
             # considering that last step actions of both agents are already present in current_memory
-            previous_step_memory = self.current_memory[-group["memory_length"] - 2: -2]
-            previous_pattern, pattern_index = self.find_pattern(group["memory_patterns"], previous_step_memory,
-                                                           group["memory_length"])
+            previous_step_memory = self.current_memory[-group["memory_length"] - 2 : -2]
+            previous_pattern, pattern_index = self.find_pattern(
+                group["memory_patterns"], previous_step_memory, group["memory_length"]
+            )
             if previous_pattern is None:
                 previous_pattern = {
                     # list of actions of both players
@@ -193,11 +208,11 @@ class MemoryPatternsPolicy(Policy):
                         # what should be the response of my_agent
                         {"action": 0, "amount": 0, "response": 1},
                         {"action": 1, "amount": 0, "response": 2},
-                        {"action": 2, "amount": 0, "response": 0}
-                    ]
+                        {"action": 2, "amount": 0, "response": 0},
+                    ],
                 }
                 group["memory_patterns"].append(previous_pattern)
             # update previous_pattern
             for action in previous_pattern["opp_next_actions"]:
-                if action["action"] == int(history.loc[step - 1, 'opponent_action']):
+                if action["action"] == int(history.loc[step - 1, "opponent_action"]):
                     action["amount"] += 1

@@ -96,7 +96,10 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
             + str(probabilities)
         )
         # Play randomly for the first 130-230 steps
-        if self.step < 130 + randint(0, 100) and get_score(self.alternate_history, 15) < 6:
+        if (
+            self.step < 130 + randint(0, 100)
+            and get_score(self.alternate_history, 15) < 6
+        ):
             action = self.random.randint(0, 2)
             if self.random.randint(0, 3) == 1:
                 # We don´t want our random seed to be cracked.
@@ -140,8 +143,8 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
 
         if len(X) > 10 * self.batch_size:
             # No need to train on old data when everyone plays randomly for the first steps
-            X = X[-10*self.batch_size:]
-            y = y[-10*self.batch_size:]
+            X = X[-10 * self.batch_size :]
+            y = y[-10 * self.batch_size :]
 
         # Favor more recent samples
         weights = np.flip(np.power(self.decay, np.arange(0, len(X))))
@@ -153,7 +156,7 @@ class NeuralPolicyEnsembleAgent(RPSAgent):
             epochs=1,
             verbose=0,
             shuffle=True,
-            sample_weight=weights
+            sample_weight=weights,
         )
 
 

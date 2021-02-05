@@ -10,12 +10,12 @@ def generate_submissions():
         "agents/iocaine_powder_policy.py",
         "agents/greenberg_policy.py",
         "agents/seed_searcher.py",
-        "agents/anti_geo.py"
+        "agents/anti_geo.py",
     ]
     agents = {
         "statistical_policy_ensemble": "agents/statistical_policy_ensemble_agent.py",
         "multi_armed_bandit": "agents/multi_armed_bandit.py",
-        "neural_policy_ensemble": "agents/neural_policy_ensemble.py"
+        "neural_policy_ensemble": "agents/neural_policy_ensemble.py",
     }
     exclude_imports = ["agents/rpscontest_bots.py"]
 

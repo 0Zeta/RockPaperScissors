@@ -35,7 +35,9 @@ class RPSAgent(object):
             {"action": np.int, "opponent_action": np.int}
         )
         # How the game would have happened if we always chose the actions selected by our agent
-        self.alternate_history = pd.DataFrame(columns=["step", "action", "opponent_action"])
+        self.alternate_history = pd.DataFrame(
+            columns=["step", "action", "opponent_action"]
+        )
         self.alternate_history.set_index("step", inplace=True)
         self.history = self.history.astype(
             {"action": np.int, "opponent_action": np.int}
@@ -78,11 +80,21 @@ class RPSAgent(object):
 
         # Choose an action and append it to the history
         action = self.act()
-        self.alternate_history.loc[self.step] = {"action": action, "opponent_action": None}
+        self.alternate_history.loc[self.step] = {
+            "action": action,
+            "opponent_action": None,
+        }
         # Calculate the probability of a win for random play
         # Taken from https://www.kaggle.com/c/rock-paper-scissors/discussion/197402
-        win_prob = 0.5 + 0.5 * math.erf(((observation.reward - 20) + 1) / math.sqrt((2/3) * (1000 - observation.step)))
-        if win_prob >= 0.92 and get_score(self.history, 10) < 5 and self.random.randrange(0, 100) <= win_prob * 100:
+        win_prob = 0.5 + 0.5 * math.erf(
+            ((observation.reward - 20) + 1)
+            / math.sqrt((2 / 3) * (1000 - observation.step))
+        )
+        if (
+            win_prob >= 0.92
+            and get_score(self.history, 10) < 5
+            and self.random.randrange(0, 100) <= win_prob * 100
+        ):
             # Try to secure the win with random play
             action = self.random.randint(0, 2)
             if self.random.randint(0, 10) <= 3:

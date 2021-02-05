@@ -74,9 +74,15 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             for config_index, conf in enumerate(self.configurations):
                 decay, reset_prob, clip_zero = conf
                 policy_scores = self.policy_scores_by_configuration[config_index, :]
-                policy_weights = np.random.dirichlet(4 * (policy_scores - np.min(policy_scores)) + 0.1)
+                policy_weights = np.random.dirichlet(
+                    4 * (policy_scores - np.min(policy_scores)) + 0.1
+                )
                 highest = (-policy_weights).argsort()[:3]
-                p = 0.7 * policy_probs[highest[0]] + 0.2 * policy_probs[highest[1]] + 0.1 * policy_probs[highest[2]]
+                p = (
+                    0.7 * policy_probs[highest[0]]
+                    + 0.2 * policy_probs[highest[1]]
+                    + 0.1 * policy_probs[highest[2]]
+                )
                 if self.strict_agent:
                     p = one_hot(int(np.argmax(p)))
                 config_probs.append(p)
@@ -119,7 +125,10 @@ class StatisticalPolicyEnsembleAgent(RPSAgent):
             )
 
         # Play randomly for the first 100-200 steps
-        if self.step < 100 + randint(0, 100) and get_score(self.alternate_history, 15) < 6:
+        if (
+            self.step < 100 + randint(0, 100)
+            and get_score(self.alternate_history, 15) < 6
+        ):
             action = self.random.randint(0, 2)
             if self.random.randint(0, 3) == 1:
                 # We don´t want our random seed to be cracked.

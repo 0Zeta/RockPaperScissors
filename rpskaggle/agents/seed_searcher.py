@@ -28,7 +28,7 @@ class SeedSearchPolicy(Policy):
         # If there still are multiple candidates
         if len(history) > 0 and len(self.seeds) > 1:
             # Saving previous moves
-            self.previous_moves.append(int(history.loc[step - 1, 'opponent_action']))
+            self.previous_moves.append(int(history.loc[step - 1, "opponent_action"]))
             # Checking each possible seed
             for i in range(len(self.seeds) - 1, -1, -1):
                 # Running for previous moves
