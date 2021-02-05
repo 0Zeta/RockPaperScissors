@@ -1,5 +1,5 @@
 """
-Iocaine Powder by Dan Egnor translated into Python by DAvid Bau
+Iocaine Powder by Dan Egnor translated into Python by David Bau
 Code adapted from http://davidbau.com/downloads/rps/rps-iocaine.py
 """
 import random

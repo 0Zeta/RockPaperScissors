@@ -2,7 +2,7 @@
 This has been an extremely interesting and fun competition for me and I'm very glad I took part in it. First of all, I want to thank the whole community for the friendly and helpful atmosphere. The discussions and notebooks in this competition were truly on the next level. Of course, also special thanks to Kaggle for hosting this competition and providing excellent support.
 
 ## Introduction
-When you first hear of Rock, Paper, Scissors, you may wonder why this is an interesting game for a computer competition. There is simply no way to beat the Nash equilibrium (playing completely randomly) statistically. However, this doesn't mean that there is no meaning in this challenge as the majority of opponents your bot may face isn't playing pure random. Therefore the goal is to try to win against these deterministic agents while trying not to lose against them at the same time (Playing deterministically is a double-edged sword.). I'll try to give a short high-level overview of the approach I chose for this task, which is an ensemble strategy, involving multiple meta-layers.
+When you first hear of Rock, Paper, Scissors, you may wonder why this is an interesting game for a computer competition. There is simply no way to beat the Nash equilibrium strategy (playing completely randomly) statistically. However, this doesn't mean that there is no meaning in this challenge as the majority of opponents your bot may face isn't playing pure random. Therefore the goal is to try to win against these deterministic agents while trying not to lose against them at the same time (Playing deterministically is a double-edged sword.). I'll try to give a short high-level overview of the approach I chose for this task, which is an ensemble strategy, involving multiple meta-layers.
 
 ## Policies
 In my code, a policy/strategy/action selector is simply a mapping of the current game history to a probability distribution over the three possible actions. A policy selecting rock all the time would yield [1, 0, 0] for example. There are multiple ways to create new policies from existing ones of which I use the following:
@@ -17,7 +17,7 @@ Dan Egnor already implemented this idea in his Iocaine Powder bot. One takes a p
 ### Counter policies
 This is an attempt to construct a policy countering a given policy. The counter policy gets constructed by assuming the opponent uses the original policy (One has to flip one's own actions and the opponent's actions in the game history.) and shifting the probability distribution produced by the policy.
 
-### Combininations
+### Combinations
 As you can see, it is relatively easy to derive a whole set of policies from a single stochastic policy. By combining the above transformations, one can get up to twelve policies out of a single one.
 
 ### List of base policies used in my final agent
@@ -34,6 +34,7 @@ As you can see, it is relatively easy to derive a whole set of policies from a s
 * [Anti-Geometry bot](https://www.kaggle.com/robga/beating-geometry-bot/output) by @robga
 * [Greenberg](https://github.com/erdman/roshambo) by Andrzej Nagorko, translated into Python by Travis Erdman
 * [Iocaine Powder](http://davidbau.com/downloads/rps/rps-iocaine.py) by Dan Egnor, translated into Python by David Bau
+
 and the following RPS Contest bots, which I could integrate into my ensemble using [this method](https://www.kaggle.com/purplepuppy/running-rpscontest-bots) by Daniel Lu (@purplepuppy):
 * [testing please ignore](http://www.rpscontest.com/entry/342001) by Daniel Lu
 * [centrifugal bumblepuppy 4](http://www.rpscontest.com/entry/161004) by Daniel Lu
@@ -55,7 +56,7 @@ If the result is too indecisive (The sum of the weights of all configurations yi
 This is the last meta-layer in my agent and maybe the one with the biggest impact. Choosing a random action is a great defensive tool as there is simply no way to beat it. An additional decayed performance score gets computed for the agent. At this level, I no longer use a probability distribution for score calculation, but the action the agent selected.
 The agent chooses a random action with a certain probability in the following cases:
 * The probability of winning by playing random is >= 92%
-* The agent performance score is below a certain threshold (I tried playing the counter of the action selected by the agent with a certain probability, but this didn't perform too well.)
+* The agent performance score is below a certain threshold (I tried playing the counter of the counter of the action selected by the agent with a certain probability, but this didn't perform too well.)
 
 ## Observations
 So that's it. Essentially just a strange cascade of scores and meta-layers operating on top of an ensemble of other agents. Interestingly, this architecture performs way better than previous ones with more meta-layers, more policies and more sophisticated methods for combining weighted probability distributions. This could be due to a bot essentially degenerating to random at a certain degree of complexity.
@@ -64,7 +65,7 @@ Removing almost all policies (except Greenberg and the Geometry bot by @superant
 In my local tests, using online-learned LSTMs as policy scoring functions vastly outperformed (up to 80 points) the approach described here, particularly because the agents with LSTMs are extremely fast at adapting to policy changes. On the leaderboard, however, this strategy performs worse. I'm convinced there is much room for further improvement using neural networks with a good architecture and maybe a combination of offline and online learning.
 
 ## Regrets
-Submitting only one copy of almost all agents and only using a fraction of my submissions doesn't seem to be a good idea in a competition where a few matches against random agents can completely destroy the score of an agent.
+Submitting almost all agents only once and only using a fraction of my submissions doesn't seem to be a good idea in a competition where a few matches against random agents can completely destroy the score of an agent.
 
 ## Conclusion
 RPS has been an amazing competition and I'm sure I learned a lot from it. What I will remember most, however, is the incredible collaboration and helpfulness in the discussions section of this competition. Thanks to everyone who made this challenge the great experience it was.
