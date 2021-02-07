@@ -1,5 +1,5 @@
 # Going Meta [preliminary gold solution]
-This has been an extremely interesting and fun competition for me and I'm very glad I took part in it. First of all, I want to thank the whole community for the friendly and helpful atmosphere. The discussions and notebooks in this competition were truly on the next level. Of course, also special thanks to Kaggle for hosting this competition and providing excellent support.
+This is a summary of my solution in the 2020-2021 ["Rock, Paper, Scissors"](https://www.kaggle.com/c/rock-paper-scissors) competition hosted on Kaggle. Participants had to write bots that competed against each other in the well-known RPS game. Each matchup consisted of 1000 rounds, making this an excellent task for machine learning/statistics/AI.
 
 ## Introduction
 When you first hear of Rock, Paper, Scissors, you may wonder why this is an interesting game for a computer competition. There is simply no way to beat the Nash equilibrium strategy (playing completely randomly) statistically. However, this doesn't mean that there is no meaning in this challenge as the majority of opponents your bot may face isn't playing pure random. Therefore the goal is to try to win against these deterministic agents while trying not to lose against them at the same time (Playing deterministically is a double-edged sword.). I'll try to give a short high-level overview of the approach I chose for this task, which is an ensemble strategy, involving multiple meta-layers.
@@ -29,13 +29,13 @@ As you can see, it is relatively easy to derive a whole set of policies from a s
 * Random forest model
 * two adapted stochastic versions of RFind
 * some fixed sequences (pi, e, De-Bruijn)
-* [Seed searcher](https://www.kaggle.com/taahakhan/rps-cracking-random-number-generators) by @taahakhan
-* [RPS Geometry](https://www.kaggle.com/superant/rps-geometry-silver-rank-by-minimal-logic) by @superant
-* [Anti-Geometry bot](https://www.kaggle.com/robga/beating-geometry-bot/output) by @robga
+* [Seed searcher](https://www.kaggle.com/taahakhan/rps-cracking-random-number-generators) by [@taaha-khan](https://github.com/taaha-khan)
+* [RPS Geometry](https://www.kaggle.com/superant/rps-geometry-silver-rank-by-minimal-logic) by [@superant](https://www.kaggle.com/superant)
+* [Anti-Geometry bot](https://www.kaggle.com/robga/beating-geometry-bot/output) by [@robga](https://www.kaggle.com/robga)
 * [Greenberg](https://github.com/erdman/roshambo) by Andrzej Nagorko, translated into Python by Travis Erdman
 * [Iocaine Powder](http://davidbau.com/downloads/rps/rps-iocaine.py) by Dan Egnor, translated into Python by David Bau
 
-and the following RPS Contest bots, which I could integrate into my ensemble using [this method](https://www.kaggle.com/purplepuppy/running-rpscontest-bots) by Daniel Lu (@purplepuppy):
+and the following RPS Contest bots, which I could integrate into my ensemble using [this method](https://www.kaggle.com/purplepuppy/running-rpscontest-bots) by Daniel Lu ([@dllu](https://github.com/dllu)):
 * [testing please ignore](http://www.rpscontest.com/entry/342001) by Daniel Lu
 * [centrifugal bumblepuppy 4](http://www.rpscontest.com/entry/161004) by Daniel Lu
 * [IO2_fightinguuu](http://www.rpscontest.com/entry/885001) by sdfsdf
@@ -45,8 +45,8 @@ and the following RPS Contest bots, which I could integrate into my ensemble usi
 * [bayes14](http://www.rpscontest.com/entry/202003) by pyfex
 
 ## Policy selector
-I tried many ways of selecting the best policy for a move, including weighted agent voting, Thompson sampling, a beta distribution, a Dirichlet distribution, LSTMs, CNNs, max wins, but one outperformed them all: argmax (which I didn't even consider until one week before the competition end date because it was so simple) applied to the decayed performance score of this policy. Every step the performance of a policy is calculated like this: score = probabilities[winning_action] - probabilities[losing_action] 
-My final version of the policy selector simply takes the three policies with the highest decayed performance score and combines their probabilities using the weights [0.7, 0.2, 0.1], I really don't know why this performs so well, but well, it does.
+I tried many ways of selecting the best policy for a move including weighted agent voting, Thompson sampling, a beta distribution, a Dirichlet distribution, LSTMs, CNNs, max wins, but one outperformed them all: argmax (which I didn't even consider until one week before the competition end date because it was so simple) applied to the decayed performance scores of the policies. Every step the performance of a policy is calculated like this: score = probabilities[winning_action] - probabilities[losing_action] 
+My final version of the policy selector simply takes the three policies with the highest decayed performance scores and combines their probabilities using the weights [0.7, 0.2, 0.1], I really don't know why this performs so well, but well, it does.
 
 ## Policy selector-selector
 I added a meta-layer by creating multiple policy selectors with different parameters to calculate the performance score. The parameters are decay (used to differentiate between long- and short-term success), drop probability (the probability to reset the score of a policy when it loses; didn't perform too well in combination with a decay < 0.99) and zero clip (whether the score should be clipped at zero). Then the agent chooses best performing parameter configuration (measured by a decayed configuration performance score with additional hyperparameters) using argmax on the configuration weights. These weights are computed by sampling from a Dirichlet distribution using the configuration performance scores. At first, I tried combining the probabilities of the configurations weighting them by their respective performance, but this led to way too much noise. However, only configurations that yield a decisive result at this step get considered.
@@ -68,4 +68,4 @@ In my local tests, using online-learned LSTMs as policy scoring functions vastly
 Submitting almost all agents only once and only using a fraction of my submissions doesn't seem to be a good idea in a competition where a few matches against random agents can completely destroy the score of an agent.
 
 ## Conclusion
-RPS has been an amazing competition and I'm sure I learned a lot from it. What I will remember most, however, is the incredible collaboration and helpfulness in the discussions section of this competition. Thanks to everyone who made this challenge the great experience it was.
+RPS has been an amazing competition and I'm sure I learned a lot from it. What I will remember most, however, is the incredible collaboration and helpfulness in the discussions section of this competition. Thanks to everyone who made this challenge the great experience it was. Of course, also special thanks to Kaggle for hosting this competition and providing excellent support.
