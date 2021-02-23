@@ -1,5 +1,5 @@
-# Going Meta [preliminary gold solution]
-This is a summary of my solution in the 2020-2021 ["Rock, Paper, Scissors"](https://www.kaggle.com/c/rock-paper-scissors) competition hosted on Kaggle. Participants had to write bots that competed against each other in the well-known RPS game. Each matchup consisted of 1000 rounds, making this an excellent task for machine learning/statistics/AI.
+# Going Meta [37th place solution]
+This is a summary of my solution for the 2020-2021 ["Rock, Paper, Scissors"](https://www.kaggle.com/c/rock-paper-scissors) competition hosted on Kaggle. Participants had to write bots that competed against each other in the well-known RPS game. Each matchup consisted of 1000 rounds, making this an excellent task for machine learning/statistics/AI.
 
 ## Introduction
 When you first hear of Rock, Paper, Scissors, you may wonder why this is an interesting game for a computer competition. There is simply no way to beat the Nash equilibrium strategy (playing completely randomly) statistically. However, this doesn't mean that there is no meaning in this challenge as the majority of opponents your bot may face isn't playing pure random. Therefore the goal is to try to win against these deterministic agents while trying not to lose against them at the same time (Playing deterministically is a double-edged sword.). I'll try to give a short high-level overview of the approach I chose for this task, which is an ensemble strategy, involving multiple meta-layers.
